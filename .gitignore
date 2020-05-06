@@ -1,0 +1,55 @@
+HELP.md
+/target/
+!.mvn/wrapper/maven-wrapper.jar
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+/build/
+
+### VS Code ###
+.vscode/
+
+
+### Spring Boot ###
+target/
+.mvn/
+
+
+## Database local
+.data/
+
+## Mac
+.DS_Store
+
+# Terraform Compiled files
+*.tfstate
+*.tfstate.backup
+
+# Module directory
+.terraform/
+terraform.tfvars
+tfplan
+
+*.crt
+*.key
+*.srl
+*.csr

@@ -1,0 +1,44 @@
+
+stages:
+  - build
+  - security-review
+  - development
+  - qa
+  - prod
+
+build:
+  stage: build
+  script:
+    - echo "Emulate a build of an image (eventually need to do something)"
+    - echo "Attest this image (using Build attestor)"
+
+security-audit:
+  stage: security-review
+  script:
+    - echo "Emulate a 'security' audit"
+    - echo "Attest image is secure (using Security Attestor)"
+
+deploy-development:
+  stage: development
+  environment:
+    name: development
+  script:
+    - echo "Emulate deploy to development"
+
+deploy-qa:
+  stage: qa
+  when: manual
+  environment:
+    name: qa
+  script:
+    - echo "Attest the image has been in Development and passed (Development Attestor)"
+    - echo "Emulate deploy to qa"
+
+deploy-production:
+  stage: prod
+  when: manual
+  environment:
+    name: prod
+  script:
+    - echo "Attest the image has been in QA and passed (QA Attestor)"
+    - echo "Emulate deploy to prod"
