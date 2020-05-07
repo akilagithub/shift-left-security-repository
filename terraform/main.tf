@@ -1,3 +1,5 @@
+resource "random_pet" "server" {}
+
 locals {
   petname = random_pet.server.id
   admin_enabled_apis = [
@@ -7,7 +9,8 @@ locals {
     "containeranalysis.googleapis.com",
     "binaryauthorization.googleapis.com",
     "container.googleapis.com",
-    "cloudkms.googleapis.com"
+    "cloudkms.googleapis.com",
+    "secretmanager.googleapis.com"
   ]
 }
 
@@ -24,7 +27,46 @@ resource "google_project_service" "enabled-apis" {
   disable_on_destroy         = true
 }
 
-resource "random_pet" "server" {}
+resource "google_service_account" "cicd-build-gsa" {
+  project = var.project-id
+  account_id   = "cicd-builds"
+  display_name = "CICD Pipeline builder Google Service Account (GSA)"
+  description  = "GSA for CICD builds and GCR pushes"
+}
+
+resource "google_project_iam_member" "cicd-permissions" {
+  project = var.project-id
+  role    = "roles/storage.admin"
+  member  = "serviceAccount:${google_service_account.cicd-build-gsa.email}"
+}
+
+resource "google_service_account_key" "cicd-build-gsa-key" {
+  service_account_id = google_service_account.cicd-build-gsa.name
+}
+
+resource "google_secret_manager_secret" "cicd-build-gsa-key-secret" {
+  provider = google-beta
+
+  secret_id = "cicd-build-gsa-key"
+
+  labels = {
+    label = "gsa-service-key"
+  }
+
+  replication {
+    automatic = true
+  }
+
+}
+
+resource "google_secret_manager_secret_version" "cicd-build-gsa-key-secret-version" {
+  provider = google-beta
+
+  secret = google_secret_manager_secret.cicd-build-gsa-key-secret.id
+
+  secret_data = google_service_account_key.cicd-build-gsa-key.private_key
+}
+
 
 resource "google_container_cluster" "primary" {
   name                        = "bin-auuth-${local.petname}"

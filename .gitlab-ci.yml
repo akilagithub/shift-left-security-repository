@@ -1,22 +1,80 @@
 
 stages:
+  - test
   - build
   - security-review
   - development
   - qa
   - prod
 
+cache:
+  paths:
+    - .cargo/
+    - .cache/sccache
+
 build:
-  stage: build
+  stage: test
+  image: rustdocker/rust:nightly
   script:
-    - echo "Emulate a build of an image (eventually need to do something)"
+    - /root/.cargo/bin/cargo test
+    - /root/.cargo/bin/cargo build --release
     - echo "Attest this image (using Build attestor)"
+  artifacts:
+    expire_in: 30 minutes
+    paths:
+      - target/release/hello_world
+
+build-and-push-image:
+  stage: build
+  image: docker:19.03.8
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+  services:
+    - docker:19.03.8-dind
+  script:
+    - mkdir keys
+    - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
+    - cat ${CI_PROJECT_DIR}/keys/key-file.json | docker login -u _json_key --password-stdin https://gcr.io
+    - docker build -t gcr.io/${GOOGLE_PROJECT_ID}/hello-world:${CI_COMMIT_SHORT_SHA} .
+    - docker push gcr.io/${GOOGLE_PROJECT_ID}/hello-world:${CI_COMMIT_SHORT_SHA}
+
+# build-image:
+#   stage: build
+#   image: gcloud:latest # FIXME
+#   before_script:
+#     - echo "GET THE GSA KEY"
+#   script:
+#     -  gcloud builds submit --tag gcr.io/${GOOGLE_PROJECT_ID}/hello-world # Hard-coded image name for convention
 
 security-audit:
   stage: security-review
+  image: docker:latest
+  services:
+  - docker:dind
   script:
     - echo "Emulate a 'security' audit"
     - echo "Attest image is secure (using Security Attestor)"
+
+# create-security-attestation:
+#   image: 'gcr.io/${PROJECT_ID}/binauthz-attestation:latest'
+#   args:
+#     - '--artifact-url'
+#     - 'gcr.io/${PROJECT_ID}/helloworld:latest'
+#     - '--attestor'
+#     - 'ATTESTOR_NAME'
+#     - '--attestor-project'
+#     - '${PROJECT_ID}'
+#     - '--keyversion'
+#     - 'KEY_VERSION'
+#     - '--keyversion-project'
+#     - '${PROJECT_ID}'
+#     - '--keyversion-location'
+#     - 'KEY_LOCATION'
+#     - '--keyversion-keyring'
+#     - 'KEYRING_NAME'
+#     - '--keyversion-key'
+#     - 'KEY_NAME'
 
 deploy-development:
   stage: development
