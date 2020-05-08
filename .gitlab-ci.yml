@@ -7,6 +7,9 @@ stages:
   - qa
   - prod
 
+variables:
+  IMAGE_DETAILS: image-details.txt
+
 cache:
   paths:
     - .cargo/
@@ -16,7 +19,7 @@ build:
   stage: test
   image: rustdocker/rust:nightly
   script:
-    - /root/.cargo/bin/cargo test
+    # - /root/.cargo/bin/cargo test
     - /root/.cargo/bin/cargo build --release
     - echo "Attest this image (using Build attestor)"
   artifacts:
@@ -41,7 +44,7 @@ build-and-push-image:
     - docker push ${FULL_IMAGE}
     - export IMAGE_ID=$(docker image inspect ${FULL_IMAGE} --format '{{ .ID }}')
     - |
-        cat > image-details.txt <<EOL
+        cat > ${IMAGE_DETAILS} <<EOL
         image: ${FULL_IMAGE} digest: ${IMAGE_ID}
         EOL
     - cat image-details.txt
@@ -56,9 +59,9 @@ security-audit:
   stage: security-review
   image: alpine:latest # TODO: Change to gcloud image or something like that
   script:
-    - cat image-details.txt
-    - export IMAGE_PATH=$(cat image-details.txt | awk '{print $2 }')
-    - export IMAGE_DIGEST=$(cat image-details.txt | awk '{print $4 }')
+    - cat ${IMAGE_DETAILS}
+    - export IMAGE_PATH=$(cat ${IMAGE_DETAILS} | awk '{print $2 }')
+    - export IMAGE_DIGEST=$(cat ${IMAGE_DETAILS} | awk '{print $4 }')
     - echo "Get Public Key for 'security' attestor"
     - echo "Emulate a 'security' audit"
     - echo "Attest image is secure (using Security Attestor)"
