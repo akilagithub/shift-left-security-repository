@@ -12,6 +12,15 @@ locals {
     "cloudkms.googleapis.com",
     "secretmanager.googleapis.com"
   ]
+
+  sa-permissions = [
+    "roles/storage.admin",
+    "roles/cloudkms.admin",
+    "roles/binaryauthorization.attestorsViewer",
+    "roles/cloudkms.signerVerifier",
+    "roles/containeranalysis.occurrences.editor",
+    "roles/containeranalysis.notes.attacher"
+  ]
 }
 
 data "google_container_engine_versions" "central1b" {
@@ -34,9 +43,10 @@ resource "google_service_account" "cicd-build-gsa" {
   description  = "GSA for CICD builds and GCR pushes"
 }
 
-resource "google_project_iam_member" "cicd-permissions" {
+resource "google_project_iam_member" "permissions" {
+  for_each = toset(local.sa-permissions)
   project = var.project-id
-  role    = "roles/storage.admin"
+  role    = each.value
   member  = "serviceAccount:${google_service_account.cicd-build-gsa.email}"
 }
 
