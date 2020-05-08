@@ -30,51 +30,45 @@ build-and-push-image:
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
+    FULL_IMAGE: gcr.io/${GOOGLE_PROJECT_ID}/hello-world:${CI_COMMIT_SHORT_SHA}
   services:
     - docker:19.03.8-dind
   script:
     - mkdir keys
     - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
     - cat ${CI_PROJECT_DIR}/keys/key-file.json | docker login -u _json_key --password-stdin https://gcr.io
-    - docker build -t gcr.io/${GOOGLE_PROJECT_ID}/hello-world:${CI_COMMIT_SHORT_SHA} .
-    - docker push gcr.io/${GOOGLE_PROJECT_ID}/hello-world:${CI_COMMIT_SHORT_SHA}
+    - docker build -t ${FULL_IMAGE} .
+    - docker push ${FULL_IMAGE}
+    - export IMAGE_ID=$(docker image inspect ${FULL_IMAGE} --format '{{ .ID }}')
+    - |
+        cat > test.yaml <<EOL
+        image: ${FULL_IMAGE} digest: ${IMAGE_ID}
+        EOL
+    - cat image-details.txt
+  artifacts:
+    expire_in: 24 hours
+    paths:
+      - image-details.txt
 
-# build-image:
-#   stage: build
-#   image: gcloud:latest # FIXME
-#   before_script:
-#     - echo "GET THE GSA KEY"
-#   script:
-#     -  gcloud builds submit --tag gcr.io/${GOOGLE_PROJECT_ID}/hello-world # Hard-coded image name for convention
+# docker image inspect gcr.io/$PROJECT_ID/binauthz-test:latest --format '{{ .ID }}' > image-digest.txt && cat image-digest.txt
 
 security-audit:
   stage: security-review
-  image: docker:latest
-  services:
-  - docker:dind
+  image: alpine:latest # TODO: Change to gcloud image or something like that
   script:
+    - cat image-details.txt
+    - export IMAGE_PATH=$(cat image-details.txt | awk '{print $2 }')
+    - export IMAGE_DIGEST=$(cat image-details.txt | awk '{print $4 }')
+    - echo "Get Public Key for 'security' attestor"
     - echo "Emulate a 'security' audit"
     - echo "Attest image is secure (using Security Attestor)"
+#
+    # - gcloud container binauthz attestations create \
+    #     --artifact-url="${IMAGE_PATH}@${IMAGE_DIGEST}" \
+    #     --attestor="projects/${PROJECT_ID}/attestors/${ATTESTOR}" \
+    #     --signature-file=/tmp/ec_signature \
+    #     --public-key-id="${PUBLIC_KEY_ID}"
 
-# create-security-attestation:
-#   image: 'gcr.io/${PROJECT_ID}/binauthz-attestation:latest'
-#   args:
-#     - '--artifact-url'
-#     - 'gcr.io/${PROJECT_ID}/helloworld:latest'
-#     - '--attestor'
-#     - 'ATTESTOR_NAME'
-#     - '--attestor-project'
-#     - '${PROJECT_ID}'
-#     - '--keyversion'
-#     - 'KEY_VERSION'
-#     - '--keyversion-project'
-#     - '${PROJECT_ID}'
-#     - '--keyversion-location'
-#     - 'KEY_LOCATION'
-#     - '--keyversion-keyring'
-#     - 'KEYRING_NAME'
-#     - '--keyversion-key'
-#     - 'KEY_NAME'
 
 deploy-development:
   stage: development
