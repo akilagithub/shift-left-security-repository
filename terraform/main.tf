@@ -19,7 +19,8 @@ locals {
     "roles/binaryauthorization.attestorsViewer",
     "roles/cloudkms.signerVerifier",
     "roles/containeranalysis.occurrences.editor",
-    "roles/containeranalysis.notes.attacher"
+    "roles/containeranalysis.notes.attacher",
+    "roles/container.developer"
   ]
 }
 
@@ -78,8 +79,8 @@ resource "google_secret_manager_secret_version" "cicd-build-gsa-key-secret-versi
 }
 
 
-resource "google_container_cluster" "primary" {
-  name                        = "bin-auuth-${local.petname}"
+resource "google_container_cluster" "development" {
+  name                        = "bin-auth-dev"
   location                    = var.zone
   enable_binary_authorization = true
   node_version                = data.google_container_engine_versions.central1b.latest_node_version
@@ -102,10 +103,11 @@ resource "google_container_cluster" "primary" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/logging.write",
       "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/devstorage.read_only",
     ]
 
     preemptible  = true
-    machine_type = "n1-standard-1"
+    machine_type = "n1-standard-4"
 
     metadata = {
       disable-legacy-endpoints = "true"
@@ -121,7 +123,7 @@ resource "google_container_cluster" "primary" {
 }
 
 resource "google_container_cluster" "qa" {
-  name                        = "bin-auth-qa-${local.petname}"
+  name                        = "bin-auth-qa"
   location                    = var.zone
   enable_binary_authorization = true
   node_version                = data.google_container_engine_versions.central1b.latest_node_version
@@ -144,10 +146,11 @@ resource "google_container_cluster" "qa" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/logging.write",
       "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/devstorage.read_only",
     ]
 
     preemptible  = true
-    machine_type = "n1-standard-1"
+    machine_type = "n1-standard-4"
 
     metadata = {
       disable-legacy-endpoints = "true"
@@ -163,7 +166,7 @@ resource "google_container_cluster" "qa" {
 }
 
 resource "google_container_cluster" "production" {
-  name                        = "bin-auth-prod-${local.petname}"
+  name                        = "bin-auth-prod"
   location                    = var.zone
   enable_binary_authorization = true
   node_version                = data.google_container_engine_versions.central1b.latest_node_version
@@ -186,10 +189,11 @@ resource "google_container_cluster" "production" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/logging.write",
       "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/devstorage.read_only",
     ]
 
     preemptible  = true
-    machine_type = "n1-standard-1"
+    machine_type = "n1-standard-4"
 
     metadata = {
       disable-legacy-endpoints = "true"

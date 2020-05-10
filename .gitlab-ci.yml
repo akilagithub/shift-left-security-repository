@@ -43,7 +43,7 @@ build-and-push-image:
     - export IMAGE_ID=$(docker image inspect ${FULL_IMAGE}:${CI_COMMIT_SHORT_SHA} --format '{{ .ID }}')
     - |
         cat > ${IMAGE_DETAILS} <<EOL
-        image: ${FULL_IMAGE} digest: ${IMAGE_ID}
+        image: ${FULL_IMAGE} digest: ${IMAGE_ID} TAG: ${CI_COMMIT_SHORT_SHA}
         EOL
     - cat image-details.txt
   artifacts:
@@ -51,15 +51,13 @@ build-and-push-image:
     paths:
       - image-details.txt
 
-# docker image inspect gcr.io/$PROJECT_ID/binauthz-test:latest --format '{{ .ID }}' > image-digest.txt && cat image-digest.txt
-
 security-audit:
   stage: security-review
   image: google/cloud-sdk:debian_component_based
   variables:
     ACTOR: "security"
   before_script:
-    - mkdir keys
+    - mkdir keys tmp
     - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
@@ -69,11 +67,14 @@ security-audit:
     - export KEYRING_NAME="${KEYRING_NAME##*/}"
     # Extract Image Path and Image Digest from generated file during image creation
     - export IMAGE_PATH="$(cat ${IMAGE_DETAILS} | awk '{print $2 }')"
-    - export IMAGE_DIGEST="$(cat ${IMAGE_DETAILS} | awk '{print $4 }')"
+    - export IMAGE_TAG="$(cat ${IMAGE_DETAILS} | awk '{print $6 }')"
+    - export IMAGE_DIGEST="$(gcloud container images describe ${IMAGE_PATH}:${IMAGE_TAG} --format='value(image_summary.digest)')"
+    - export IMAGE_DIGEST_OLD="$(cat ${IMAGE_DETAILS} | awk '{print $4 }')"
+    - echo "NEW IMG_DIGEST=${IMAGE_DIGEST} vs OLD=${IMAGE_DIGEST_OLD}"
     # - gcloud kms keys versions get-public-key key-version --location us-central1  --keyring ${KEYRING_NAME} --key ${ACTOR}-attestor-key --output-file ./output.pub
     - export PUBLIC_KEY_ID=$(gcloud container binauthz attestors describe ${ACTOR}-attestor --format='value(userOwnedGrafeasNote.publicKeys[0].id)')
     # Create the file to sign
-    - gcloud container binauthz create-signature-payload --artifact-url=${IMAGE_PATH}@${IMAGE_DIGEST} > /tmp/generated_payload.json
+    - gcloud container binauthz create-signature-payload --artifact-url=${IMAGE_PATH}@${IMAGE_DIGEST} > ${CI_PROJECT_DIR}/tmp/generated_payload.json
     # Sign generated_payload.json with KMS
     - |
         gcloud kms asymmetric-sign \
@@ -82,30 +83,64 @@ security-audit:
         --key ${ACTOR}-attestor-key \
         --version 1 \
         --digest-algorithm sha512 \
-        --input-file /tmp/generated_payload.json \
-        --signature-file /tmp/ec_signature
+        --input-file ${CI_PROJECT_DIR}/tmp/generated_payload.json \
+        --signature-file ${CI_PROJECT_DIR}/tmp/ec_signature
 
     # Create attestation
     - |
       gcloud container binauthz attestations create \
         --artifact-url="${IMAGE_PATH}@${IMAGE_DIGEST}" \
         --attestor="projects/${GOOGLE_PROJECT_ID}/attestors/${ACTOR}-attestor" \
-        --signature-file=/tmp/ec_signature \
+        --signature-file=${CI_PROJECT_DIR}/tmp/ec_signature \
         --public-key-id="${PUBLIC_KEY_ID}"
 
   artifacts:
     when: always
     expire_in: 1 day
     paths:
-    - /tmp/generated_payload.json
-    - /tmp/ec_signature
+    - ${CI_PROJECT_DIR}/tmp/generated_payload.json
+    - ${CI_PROJECT_DIR}/tmp/ec_signature
 
 deploy-development:
   stage: development
+  image:
+    name: gcr.io/cloud-builders/gke-deploy:stable
+    entrypoint: [""]
   environment:
     name: development
+  before_script:
+    - mkdir -p keys
+    - mkdir -p tmp
+    - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
+    - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
+    - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+    - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
   script:
-    - echo "Emulate deploy to development"
+    - export IMAGE_PATH="$(cat ${IMAGE_DETAILS} | awk '{print $2 }')"
+    - export IMAGE_TAG="$(cat ${IMAGE_DETAILS} | awk '{print $6 }')"
+    - export IMAGE_DIGEST="$(gcloud container images describe ${IMAGE_PATH}:${IMAGE_TAG} --format='value(image_summary.digest)')"
+    - export CLUSTER_NAME="bin-auth-dev" # hardcoded in Terraform #TODO: Create and pull from secret during creation
+    - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone us-central1-a
+    # Build manifest files
+    - cd ${CI_PROJECT_DIR}/k8s/overlays/development
+    - ${CI_PROJECT_DIR}/kustomize edit set image busybox="${IMAGE_PATH}@${IMAGE_DIGEST}"
+    - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/development/deploy-manifest.yaml
+    - kubectl apply -f deploy-manifest.yaml
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - ${CI_PROJECT_DIR}/k8s/overlays/development/deploy-manifest.yaml
+    when: always
+
+
+premature-qa-without-attestation:
+  stage: development
+  environment:
+    name: qa
+  script:
+    - echo "Emulate deploy to QA BEFORE attestations have been set"
+    - exit 1 # fake a failure
+  allow_failure: true
 
 deploy-qa:
   stage: qa
@@ -115,6 +150,9 @@ deploy-qa:
   script:
     - echo "Attest the image has been in Development and passed (Development Attestor)"
     - echo "Emulate deploy to qa"
+  only:
+    refs:
+      - master
 
 deploy-production:
   stage: prod
@@ -124,3 +162,6 @@ deploy-production:
   script:
     - echo "Attest the image has been in QA and passed (QA Attestor)"
     - echo "Emulate deploy to prod"
+  only:
+    refs:
+      - master

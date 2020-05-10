@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-deployment
+  labels:
+    app: hello-world
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-world-app
+  template:
+    metadata:
+      labels:
+        app: hello-world-app
+    spec:
+      containers:
+      # NOTE: Image missing added by Kustomize
+      - name: hello-world-image
+        image: busybox:xxxxxx
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: "0.25"
+            memory: "64Mi"
+          limits:
+            cpu: "0.5"
+            memory: "128Mi"
