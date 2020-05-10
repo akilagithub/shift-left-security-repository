@@ -61,5 +61,14 @@ resource "google_binary_authorization_policy" "policy" {
       module.security-binary-auth.attestor
     ]
   }
+  # QA Environment Needs Build and Security
+  cluster_admission_rules {
+    cluster          = "${var.zone}.${google_container_cluster.development.name}"
+    evaluation_mode  = "REQUIRE_ATTESTATION"
+    enforcement_mode = "ENFORCED_BLOCK_AND_AUDIT_LOG"
+    require_attestations_by = [
+      module.security-binary-auth.attestor
+    ]
+  }
 
 }
