@@ -141,6 +141,9 @@ premature-qa-without-attestation:
     - echo "Emulate deploy to QA BEFORE attestations have been set"
     - exit 1 # fake a failure
   allow_failure: true
+  only:
+    variables:
+      - $EARLY_QA
 
 deploy-qa:
   stage: qa
