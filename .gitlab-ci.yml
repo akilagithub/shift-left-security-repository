@@ -70,7 +70,6 @@ security-audit:
     - export IMAGE_TAG="$(cat ${IMAGE_DETAILS} | awk '{print $6 }')"
     - export IMAGE_DIGEST="$(gcloud container images describe ${IMAGE_PATH}:${IMAGE_TAG} --format='value(image_summary.digest)')"
     - export IMAGE_DIGEST_OLD="$(cat ${IMAGE_DETAILS} | awk '{print $4 }')"
-    - echo "NEW IMG_DIGEST=${IMAGE_DIGEST} vs OLD=${IMAGE_DIGEST_OLD}"
     # - gcloud kms keys versions get-public-key key-version --location us-central1  --keyring ${KEYRING_NAME} --key ${ACTOR}-attestor-key --output-file ./output.pub
     - export PUBLIC_KEY_ID=$(gcloud container binauthz attestors describe ${ACTOR}-attestor --format='value(userOwnedGrafeasNote.publicKeys[0].id)')
     # Create the file to sign
@@ -108,19 +107,32 @@ deploy-development:
     entrypoint: [""]
   environment:
     name: development
+  variables:
+    ACTOR: "security"
   before_script:
     - mkdir -p keys
     - mkdir -p tmp
     - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
-    - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-  script:
     - export IMAGE_PATH="$(cat ${IMAGE_DETAILS} | awk '{print $2 }')"
     - export IMAGE_TAG="$(cat ${IMAGE_DETAILS} | awk '{print $6 }')"
     - export IMAGE_DIGEST="$(gcloud container images describe ${IMAGE_PATH}:${IMAGE_TAG} --format='value(image_summary.digest)')"
     - export CLUSTER_NAME="bin-auth-dev" # hardcoded in Terraform #TODO: Create and pull from secret during creation
+  script:
+
+    # Verify attestations exist for image+digest
+    - |
+      export ATTESTATION_LIST=$(gcloud container binauthz attestations list \
+      --project="${GOOGLE_PROJECT_ID}" \
+      --attestor="projects/${GOOGLE_PROJECT_ID}/attestors/${ACTOR}-attestor" \
+      --filter="resourceUri=https://${IMAGE_PATH}@${IMAGE_DIGEST}" --format="value('name')")
+
+    # Check if attestation created for security-attestor
+    - if [ -z ATTESTATION_LIST ]; then echo "Required Attestation for '${ACTOR}-attestor' does not exist"; exit 1; fi
+
     - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone us-central1-a
+    - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
     # Build manifest files
     - cd ${CI_PROJECT_DIR}/k8s/overlays/development
     - ${CI_PROJECT_DIR}/kustomize edit set image busybox="${IMAGE_PATH}@${IMAGE_DIGEST}"

@@ -94,5 +94,25 @@ There are two CI/CD variables used in the pipeline:  GOOGLE_BUILD_GSA and GOOGLE
 
 This repository creates 3 GKE instances, utilizes KMS keys for the attestors, a Secret in the Secrets Manager and a small set of other infrastructure related to the project.
 
-> :warning: DO NOT assume this project can run under the "free-tier" for GCP, but if run in isolation and at short periods at a time, the costs should be very minimal
-> :warning: Each instance is a small GKE instance and are **NOT** intended to be ready for production.  The purpose is to demonstrate a deployment sequence, NOT how to configure GKE clusters
+    > :warning: DO NOT assume this project can run under the "free-tier" for GCP, but if run in isolation and at short periods at a time, the costs should be very minimal
+
+    > :warning: Each instance is a small GKE instance and are **NOT** intended to be ready for production.  The purpose is to demonstrate a deployment sequence, NOT how to configure GKE clusters
+
+
+# Logging / Metrics
+
+Creating a metric for the number of denied containers due to the policy can be created using the following formula in Stackdriver:
+
+```json
+resource.type="k8s_cluster"
+resource.labels.location="us-central1-a"
+resource.labels.cluster_name="bin-auth-dev"
+log_name="projects/[PROJECT_ID]/logs/events"
+jsonPayload.reason="FailedCreate"
+jsonPayload.kind="Event"
+jsonPayload.message=~"image policy webhook backend denied one or more images" AND NOT "(combined from similar events)"
+```
+
+    > :warning: NOTE, replace [PROJECT_ID] with the real Google project ID. The "location" and "cluster_name" are defaults for this project, change as needed to accommodate the appropriate cluster
+
+Once the logs are visible, select "Create Metric" and fill in the relevant information and save.  Allow time for the metrics to be counted/indexed (up to 24h). During this time, create an Alert based on the metric for a reasonable amount of failure.
