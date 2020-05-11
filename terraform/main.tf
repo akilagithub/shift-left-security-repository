@@ -19,6 +19,7 @@ locals {
     "roles/binaryauthorization.attestorsViewer",
     "roles/cloudkms.signerVerifier",
     "roles/containeranalysis.occurrences.editor",
+    "roles/containeranalysis.notes.occurrences.viewer",
     "roles/containeranalysis.notes.attacher",
     "roles/container.developer"
   ]
