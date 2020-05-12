@@ -12,7 +12,7 @@ The purpose of this repository is to demonstrate a CICD flow using a build-up of
 
 ```mermaid
 sequenceDiagram
-    participant B as Build Attestor
+    participant B as Build System
     participant S as Security Attestor
     participant D as Developer/Person
     participant Q as QA Attestor
@@ -23,18 +23,17 @@ sequenceDiagram
 
     B->>S: Build Image
     Note right of B: Tests Pass
-    Note right of B: Create Attestation
 
     S->>D: Run CVE Tests
-    Note right of S: Create Attestation
+    Note right of S: Attestation: security
     Note right of S: Deploy to DEV
 
     D->>Q: Dev Ready for QA
-    Note right of D: Trigger Manual Deploy
+    Note right of D: Trigger: Manual<br/>QA Deploy
+    Note right of D: Attestation: qa
 
     Q->>P: QA Verify
-    Note right of Q: Trigger Prod Deploy
-    Note right of Q: Create Attestation
+    Note right of Q: Attestation: prod
 
     P-->>Q: Reject
     Note right of Q: If Not All<br/>Attestations, reject
