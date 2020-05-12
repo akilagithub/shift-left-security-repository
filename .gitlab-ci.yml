@@ -124,7 +124,7 @@ deploy-development:
       --filter="resourceUri=https://${IMAGE_PATH}@${IMAGE_DIGEST}" --format="value('name')")
 
     # Check if attestation created for security-attestor
-    - if [ -z ATTESTATION_LIST ]; then echo "Required Attestation for '${ACTOR}-attestor' does not exist"; exit 1; fi
+    - if [ ! -z "$ATTESTATION_LIST" ]; then echo "Required Attestation for '${ACTOR}-attestor' does not exist" && exit 1; fi
 
     - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone us-central1-a
     - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
@@ -133,13 +133,16 @@ deploy-development:
     - ${CI_PROJECT_DIR}/kustomize edit set image busybox="${IMAGE_PATH}@${IMAGE_DIGEST}"
     - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/development/deploy-manifest.yaml
     - kubectl apply -f deploy-manifest.yaml
+    # Look for Events=FailedCreate and the Image+Digest
+    - export ERRORS=$(kubectl get event --field-selector reason=FailedCreate | grep "${IMAGE_PATH}@${IMAGE_DIGEST}")
+    - if [ ! -z "$ERRORS" ]; then echo "Failed Deployment" && echo "${ERRORS}" && exit 1; fi
   artifacts:
     expire_in: 1 day
     paths:
       - ${CI_PROJECT_DIR}/k8s/overlays/development/deploy-manifest.yaml
     when: always
 
-build-attestation:
+build-accepted-attestation:
   stage: development-approved
   when: manual
   allow_failure: false
@@ -210,11 +213,14 @@ deploy-qa:
     - ${CI_PROJECT_DIR}/kustomize edit set image busybox="${IMAGE_PATH}@${IMAGE_DIGEST}"
     - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/qa/deploy-manifest.yaml
     - kubectl apply -f deploy-manifest.yaml
+    # Look for Events=FailedCreate and the Image+Digest
+    - export ERRORS=$(kubectl get event --field-selector reason=FailedCreate | grep "${IMAGE_PATH}@${IMAGE_DIGEST}")
+    - if [ ! -z "$ERRORS" ]; then echo "Failed Deployment" && echo "${ERRORS}" && exit 1; fi
   # only:
   #   refs:
   #     - master
 
-qa-attestation:
+qa-accepted-attestation:
   stage: qa-approved
   image: google/cloud-sdk:debian_component_based
   when: manual
@@ -288,7 +294,9 @@ deploy-production:
     - ${CI_PROJECT_DIR}/kustomize edit set image busybox="${IMAGE_PATH}@${IMAGE_DIGEST}"
     - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/qa/deploy-manifest.yaml
     - kubectl apply -f deploy-manifest.yaml
-
+    # Look for Events=FailedCreate and the Image+Digest
+    - export ERRORS=$(kubectl get event --field-selector reason=FailedCreate | grep "${IMAGE_PATH}@${IMAGE_DIGEST}")
+    - if [ ! -z "$ERRORS" ]; then echo "Failed Deployment" && echo "${ERRORS}" && exit 1; fi
   # only:
   #   refs:
   #     - master
