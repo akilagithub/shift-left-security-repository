@@ -1,30 +1,30 @@
 output attestor-build-name {
-  value       = module.build-binary-auth.attestor
+  value       = module.build-attestor.attestor
   description = "Attestor for the Build Validation"
 }
 
 output attestor-build-key {
-  value       = module.build-binary-auth.key
+  value       = module.build-attestor.key
   description = "Public Key for the Build Attestor"
 }
 
 output attestor-security-name {
-  value       = module.security-binary-auth.attestor
+  value       = module.security-attestor.attestor
   description = "Attestor for the Security Validation"
 }
 
 output attestor-security-key {
-  value       = module.security-binary-auth.key
+  value       = module.security-attestor.key
   description = "Public Key for the Build Attestor"
 }
 
 output attestor-qa-name {
-  value       = module.qa-binary-auth.attestor
+  value       = module.quality-attestor.attestor
   description = "Attestor for the QA Validation"
 }
 
 output attestor-qa-key {
-  value       = module.qa-binary-auth.key
+  value       = module.quality-attestor.key
   description = "Public Key for the QA Attestor"
 }
 

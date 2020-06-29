@@ -13,6 +13,12 @@ locals {
     "secretmanager.googleapis.com"
   ]
 
+  attestors = [
+    "quality",
+    "build",
+    "security"
+  ]
+
   sa-permissions = [
     "roles/storage.admin",
     "roles/cloudkms.admin",

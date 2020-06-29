@@ -1,32 +1,48 @@
 resource "random_pet" "keyring-name" {
 }
 
+resource "null_resource" "resource-to-wait-on" {
+  provisioner "local-exec" {
+    command = "sleep 30" # 30 seconds
+  }
+  depends_on = [module.project-services.project_id]
+}
+
 resource "google_kms_key_ring" "keyring" {
   name     = "attestor-key-ring-${random_pet.keyring-name.id}"
   location = var.keyring-region
   lifecycle {
     prevent_destroy = false
   }
+  depends_on = [null_resource.resource-to-wait-on]
 }
 
-module "build-binary-auth" {
-  source = "./modules/binaryauth"
-  # variables
-  attestor-name = "build"
+module "quality-attestor" {
+  source = "terraform-google-modules/kubernetes-engine/google//modules/binary-authorization"
+
+  project_id = var.project
+
+  attestor-name = local.attestors[0]
   keyring-id    = google_kms_key_ring.keyring.id
 }
 
-module "qa-binary-auth" {
-  source = "./modules/binaryauth"
-  # variables
-  attestor-name = "qa"
+# Create Builder attestor
+module "build-attestor" {
+  source = "terraform-google-modules/kubernetes-engine/google//modules/binary-authorization"
+
+  project_id = var.project
+
+  attestor-name = local.attestors[1]
   keyring-id    = google_kms_key_ring.keyring.id
 }
 
-module "security-binary-auth" {
-  source = "./modules/binaryauth"
-  # variables
-  attestor-name = "security"
+# Create Security attestor
+module "security-attestor" {
+  source = "terraform-google-modules/kubernetes-engine/google//modules/binary-authorization"
+
+  project_id = var.project
+
+  attestor-name = local.attestors[2]
   keyring-id    = google_kms_key_ring.keyring.id
 }
 
@@ -46,9 +62,9 @@ resource "google_binary_authorization_policy" "policy" {
     evaluation_mode  = "REQUIRE_ATTESTATION"
     enforcement_mode = "ENFORCED_BLOCK_AND_AUDIT_LOG"
     require_attestations_by = [
-      module.build-binary-auth.attestor,
-      module.qa-binary-auth.attestor,
-      module.security-binary-auth.attestor
+      module.build-attestor.attestor,
+      module.quality-attestor.attestor,
+      module.security-attestor.attestor
     ]
   }
   # QA Environment Needs Build and Security
@@ -57,8 +73,8 @@ resource "google_binary_authorization_policy" "policy" {
     evaluation_mode  = "REQUIRE_ATTESTATION"
     enforcement_mode = "ENFORCED_BLOCK_AND_AUDIT_LOG"
     require_attestations_by = [
-      module.build-binary-auth.attestor,
-      module.security-binary-auth.attestor
+      module.build-attestor.attestor,
+      module.security-attestor.attestor
     ]
   }
   # QA Environment Needs Build and Security
@@ -67,7 +83,7 @@ resource "google_binary_authorization_policy" "policy" {
     evaluation_mode  = "REQUIRE_ATTESTATION"
     enforcement_mode = "ENFORCED_BLOCK_AND_AUDIT_LOG"
     require_attestations_by = [
-      module.security-binary-auth.attestor
+      module.security-attestor.attestor
     ]
   }
 
