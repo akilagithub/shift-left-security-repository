@@ -30,12 +30,17 @@ data "google_container_engine_versions" "central1b" {
   version_prefix = var.gke-version
 }
 
-resource "google_project_service" "enabled-apis" {
-  for_each                   = toset(local.admin_enabled_apis)
-  project                    = var.project
-  service                    = each.value
-  disable_dependent_services = true
-  disable_on_destroy         = true
+module "project-services" {
+  source  = "terraform-google-modules/project-factory/google//modules/project_services"
+  version = "~> 8.0"
+
+  project_id = var.project
+
+  # Don't disable the services
+  disable_services_on_destroy = false
+  disable_dependent_services = false
+
+  activate_apis = local.admin_enabled_apis
 }
 
 resource "google_service_account" "cicd-build-gsa" {
@@ -120,7 +125,7 @@ resource "google_container_cluster" "development" {
     create = "30m"
     update = "40m"
   }
-  depends_on = [google_project_service.enabled-apis]
+  depends_on = [module.project-services]
 }
 
 resource "google_container_cluster" "qa" {
@@ -163,7 +168,7 @@ resource "google_container_cluster" "qa" {
     create = "30m"
     update = "40m"
   }
-  depends_on = [google_project_service.enabled-apis]
+  depends_on = [module.project-services]
 }
 
 resource "google_container_cluster" "production" {
@@ -206,5 +211,5 @@ resource "google_container_cluster" "production" {
     create = "30m"
     update = "40m"
   }
-  depends_on = [google_project_service.enabled-apis]
+  depends_on = [module.project-services]
 }
