@@ -1,6 +1,5 @@
 variable project-id {
   type        = string
-  default     = "binary-authorization"
   description = "Project ID (duplciated from provider)"
 }
 
