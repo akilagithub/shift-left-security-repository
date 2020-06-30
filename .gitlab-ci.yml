@@ -4,9 +4,7 @@ stages:
   - build
   - security-review
   - development
-  - development-approved
-  - qa
-  - qa-approved
+  - QA
   - prod
 
 variables:
@@ -14,18 +12,13 @@ variables:
 
 build:
   stage: test
-  image: rustdocker/rust:nightly
+  image: golang:1.13
   script:
-    # - /root/.cargo/bin/cargo test
-    - /root/.cargo/bin/cargo build --release
+    - go build -o target/hello-world src/main.go
   artifacts:
     expire_in: 30 minutes
     paths:
-      - target/release/hello_world
-  cache:
-    paths:
-      - .cargo/
-      - .cache/sccache
+      - target/hello_world # Saved for debugging
 
 build-and-push-image:
   stage: build
@@ -37,7 +30,7 @@ build-and-push-image:
   services:
     - docker:19.03.8-dind
   script:
-    - mkdir keys
+    - mkdir -p keys
     - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
     - cat ${CI_PROJECT_DIR}/keys/key-file.json | docker login -u _json_key --password-stdin https://gcr.io
     - docker build -t ${FULL_IMAGE}:${CI_COMMIT_SHORT_SHA} .
@@ -59,12 +52,14 @@ security-audit:
   variables:
     ACTOR: "security"
   before_script:
-    - mkdir keys tmp
+    - mkdir -p keys
+    - mkdir -p tmp
     - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
   script:
-    - export KEYRING_NAME="$(gcloud kms keyrings list --location=us-central1 --format='value(NAME)')"
+    # FIXME: How to target the "active" keyring since there could be many keyrings!!!
+    - export KEYRING_NAME="$(gcloud secrets versions access latest --secret='keyring-name')"
     # kms keyrings list produces a long string including the project and location, the below command only uses the keyring name
     - export KEYRING_NAME="${KEYRING_NAME##*/}"
     # Extract Image Path and Image Digest from generated file during image creation
@@ -94,6 +89,26 @@ security-audit:
         --attestor="projects/${GOOGLE_PROJECT_ID}/attestors/${ACTOR}-attestor" \
         --signature-file=${CI_PROJECT_DIR}/tmp/ec_signature \
         --public-key-id="${PUBLIC_KEY_ID}"
+  artifacts:
+    expire_in: 24 hours
+    paths:
+      - ${CI_PROJECT_DIR}/tmp/generated_payload.json
+
+# Scan for CVEs
+image-scan-vulnerabilities:
+  stage: security-review
+  image: gcr.io/kritis-project/kritis-server
+  script:
+    - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
+    - export IMAGE_PATH="$(cat image-details.txt | awk '{print $2 }')"
+    - echo "KRITIS---${IMAGE_PATH}@${IMAGE_DIGEST}"
+    - |
+      kritis/signer \
+      -v=10 \
+      -alsologtostderr \
+      -image="${IMAGE_PATH}@${IMAGE_DIGEST}" \
+      -policy=policy.yaml \
+      -mode=check-only
 
 deploy-development:
   stage: development
@@ -123,7 +138,7 @@ deploy-development:
       --attestor="projects/${GOOGLE_PROJECT_ID}/attestors/${ACTOR}-attestor" \
       --filter="resourceUri=https://${IMAGE_PATH}@${IMAGE_DIGEST}" --format="value('name')")
 
-    # Check if attestation created for security-attestor
+    # Check if attestation created for security-attestor (Note: This is NOT necessary because the Policy rejects non-attestation builds)
     - if [ ! -z "$ATTESTATION_LIST" ]; then echo "Required Attestation for '${ACTOR}-attestor' does not exist" && exit 1; fi
 
     - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone us-central1-a
@@ -134,28 +149,31 @@ deploy-development:
     - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/development/deploy-manifest.yaml
     - kubectl apply -f deploy-manifest.yaml
     # Look for Events=FailedCreate and the Image+Digest
+    - sleep 3s # wait for deployment to sync
     - export ERRORS=$(kubectl get event --field-selector reason=FailedCreate | grep "${IMAGE_PATH}@${IMAGE_DIGEST}")
-    - if [ ! -z "$ERRORS" ]; then echo "Failed Deployment" && echo "${ERRORS}" && exit 1; fi
+    - if [ ! -z "$ERRORS" ]; then echo "Failed Deployment, rolling back" && echo "${ERRORS}" && kubectl delete -f deploy-manifest.yaml && exit 1; fi
   artifacts:
     expire_in: 1 day
     paths:
       - ${CI_PROJECT_DIR}/k8s/overlays/development/deploy-manifest.yaml
     when: always
 
-build-accepted-attestation:
-  stage: development-approved
+accept-development:
+  stage: development
   when: manual
   allow_failure: false
   image: google/cloud-sdk:debian_component_based
   variables:
     ACTOR: "build"
   before_script:
-    - mkdir keys tmp
+    - mkdir -p keys
+    - mkdir -p tmp
     - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
   script:
-    - export KEYRING_NAME="$(gcloud kms keyrings list --location=us-central1 --format='value(NAME)')"
+    # FIXME: How to target the "active" keyring since there could be many keyrings!!!
+    - export KEYRING_NAME="$(gcloud secrets versions access latest --secret='keyring-name')"
     # kms keyrings list produces a long string including the project and location, the below command only uses the keyring name
     - export KEYRING_NAME="${KEYRING_NAME##*/}"
     # Extract Image Path and Image Digest from generated file during image creation
@@ -187,11 +205,11 @@ build-accepted-attestation:
         --public-key-id="${PUBLIC_KEY_ID}"
 
 #### Required Attestation is "security" and "build"
-deploy-qa:
+deploy-QA:
   image:
     name: gcr.io/cloud-builders/gke-deploy:stable
     entrypoint: [""]
-  stage: qa
+  stage: QA
   when: on_success
   environment:
     name: qa
@@ -214,26 +232,29 @@ deploy-qa:
     - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/qa/deploy-manifest.yaml
     - kubectl apply -f deploy-manifest.yaml
     # Look for Events=FailedCreate and the Image+Digest
+    - sleep 3s
     - export ERRORS=$(kubectl get event --field-selector reason=FailedCreate | grep "${IMAGE_PATH}@${IMAGE_DIGEST}")
     - if [ ! -z "$ERRORS" ]; then echo "Failed Deployment" && echo "${ERRORS}" && exit 1; fi
   # only:
   #   refs:
   #     - master
 
-qa-accepted-attestation:
-  stage: qa-approved
+accept-QA:
+  stage: QA
   image: google/cloud-sdk:debian_component_based
   when: manual
   allow_failure: false
   variables:
-    ACTOR: "qa"
+    ACTOR: "quality"
   before_script:
-    - mkdir keys tmp
+    - mkdir -p keys
+    - mkdir -p tmp
     - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
   script:
-    - export KEYRING_NAME="$(gcloud kms keyrings list --location=us-central1 --format='value(NAME)')"
+    # FIXME: How to target the "active" keyring since there could be many keyrings!!!
+    - export KEYRING_NAME="$(gcloud secrets versions access latest --secret='keyring-name')"
     # kms keyrings list produces a long string including the project and location, the below command only uses the keyring name
     - export KEYRING_NAME="${KEYRING_NAME##*/}"
     # Extract Image Path and Image Digest from generated file during image creation
@@ -290,11 +311,12 @@ deploy-production:
     - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone us-central1-a
     - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
     # Build manifest files
-    - cd ${CI_PROJECT_DIR}/k8s/overlays/qa
+    - cd ${CI_PROJECT_DIR}/k8s/overlays/production
     - ${CI_PROJECT_DIR}/kustomize edit set image busybox="${IMAGE_PATH}@${IMAGE_DIGEST}"
-    - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/qa/deploy-manifest.yaml
+    - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/production/deploy-manifest.yaml
     - kubectl apply -f deploy-manifest.yaml
     # Look for Events=FailedCreate and the Image+Digest
+    - sleep 3s
     - export ERRORS=$(kubectl get event --field-selector reason=FailedCreate | grep "${IMAGE_PATH}@${IMAGE_DIGEST}")
     - if [ ! -z "$ERRORS" ]; then echo "Failed Deployment" && echo "${ERRORS}" && exit 1; fi
   # only:

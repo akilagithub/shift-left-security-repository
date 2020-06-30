@@ -1,8 +1,0 @@
-[package]
-name = "hello_world"
-version = "0.0.1"
-authors = ["mensor"]
-edition = "2018"
-
-[dependencies]
-rocket = "0.4"
