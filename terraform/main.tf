@@ -10,7 +10,8 @@ locals {
     "binaryauthorization.googleapis.com",
     "container.googleapis.com",
     "cloudkms.googleapis.com",
-    "secretmanager.googleapis.com"
+    "secretmanager.googleapis.com",
+    "containerscanning.googleapis.com"
   ]
 
   attestors = [
@@ -27,7 +28,8 @@ locals {
     "roles/containeranalysis.occurrences.editor",
     "roles/containeranalysis.notes.occurrences.viewer",
     "roles/containeranalysis.notes.attacher",
-    "roles/container.developer"
+    "roles/container.developer",
+    "roles/secretmanager.secretAccessor"
   ]
 }
 

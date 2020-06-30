@@ -38,3 +38,8 @@ output cicd-gsa-secret-version {
   value       = google_secret_manager_secret_version.cicd-build-gsa-key-secret-version.name
   description = "Secret containing the json credentials for the SA to be used in the CICD pipelines"
 }
+
+output "keyring-name" {
+  value = google_kms_key_ring.keyring.name
+  description = "Keyring unique name"
+}

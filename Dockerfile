@@ -1,6 +1,15 @@
-FROM ubuntu:latest
+# Start by building the application.
+FROM golang:1.13-buster as build
 
-COPY target/release/hello_world /hello_world
-EXPOSE 8000
-CMD ["/hello_world"]
-# ENTRYPOINT ["/hello_world"]
+WORKDIR /src/
+COPY src/ /src
+# ADD . /src/
+
+RUN go get -d -v ./...
+
+RUN go build -o /go/bin/app
+
+# Now copy it into our base image.
+FROM gcr.io/distroless/base-debian10
+COPY --from=build /go/bin/app /
+CMD ["/app"]
