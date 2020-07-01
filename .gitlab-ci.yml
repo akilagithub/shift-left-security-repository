@@ -10,7 +10,7 @@ stages:
 variables:
   IMAGE_DETAILS: image-details.txt
 
-build:
+test-app:
   stage: test
   image: golang:1.13
   script:
@@ -20,7 +20,25 @@ build:
     paths:
       - target/hello_world # Saved for debugging
 
-build-and-push-image:
+build-kritis-image:
+  stage: build
+  image: docker:19.03.8
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+    # FULL_IMAGE: gcr.io/${GOOGLE_PROJECT_ID}/kritis-signer
+    FULL_IMAGE: "${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/kritis-signer"
+  services:
+    - docker:19.03.8-dind
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - cd build-images/
+    - docker build -t ${FULL_IMAGE}:latest -t ${FULL_IMAGE}:${CI_COMMIT_SHORT_SHA} .
+    - docker push ${FULL_IMAGE}
+  only:
+    - tags
+
+build-app:
   stage: build
   image: docker:19.03.8
   variables:
@@ -35,7 +53,7 @@ build-and-push-image:
     - cat ${CI_PROJECT_DIR}/keys/key-file.json | docker login -u _json_key --password-stdin https://gcr.io
     - docker build -t ${FULL_IMAGE}:${CI_COMMIT_SHORT_SHA} .
     - docker push ${FULL_IMAGE}:${CI_COMMIT_SHORT_SHA}
-    - export IMAGE_ID=$(docker image inspect ${FULL_IMAGE}:${CI_COMMIT_SHORT_SHA} --format '{{ .ID }}')
+    - export IMAGE_ID=$(docker image inspect ${FULL_IMAGE}:${CI_COMMIT_SHORT_SHA} --format '{{index .RepoDigests 0}}')
     - |
         cat > ${IMAGE_DETAILS} <<EOL
         image: ${FULL_IMAGE} digest: ${IMAGE_ID} TAG: ${CI_COMMIT_SHORT_SHA}
@@ -97,18 +115,26 @@ security-audit:
 # Scan for CVEs
 image-scan-vulnerabilities:
   stage: security-review
-  image: gcr.io/kritis-project/kritis-server
+  image:
+    name: "${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/kritis-signer"
+    # entrypoint: ["/bin/bash"]
   script:
+    - cat image-details.txt
     - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
-    - export IMAGE_PATH="$(cat image-details.txt | awk '{print $2 }')"
-    - echo "KRITIS---${IMAGE_PATH}@${IMAGE_DIGEST}"
+    - mkdir -p keys
+    - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
+    - export GOOGLE_APPLICATION_CREDENTIALS=${CI_PROJECT_DIR}/keys/key-file.json
+    - echo "KRITIS IMAGE DETAILS---${IMAGE_DIGEST}"
+    # NOTE: Signer does NOT fail if image is not present
     - |
-      kritis/signer \
+      /signer \
       -v=10 \
       -alsologtostderr \
-      -image="${IMAGE_PATH}@${IMAGE_DIGEST}" \
-      -policy=policy.yaml \
-      -mode=check-only
+      -image="${IMAGE_DIGEST}" \
+      -policy=container-analysis-policy.yaml \
+      -vulnz_timeout=1m \
+      -mode=check-only || error=true
+    - if [[ $error == true ]]; then echo "Container Analysis failed due to CVE thresholds being triggered"; fi
 
 deploy-development:
   stage: development
