@@ -1,0 +1,27 @@
+schemaVersion: "2.0.0"
+
+globalEnvVars:
+  - key: "PATH"
+    value: "/env/bin:$PATH"
+
+fileExistenceTests:
+- name: 'Root folder is executable'
+  path: '/'
+  shouldExist: true
+  permissions: 'drwxr-xr-x'
+  uid: 0
+  gid: 0
+  isExecutableBy: 'group'
+- name: 'Application binary exists'
+  path: '/app'
+  shouldExist: true
+  isExecutableBy: 'group'
+- name: 'Debian Sources do NOT exist'
+  path: '/etc/apt/sources.list'
+  shouldExist: false
+- name: 'No Bash shell is available'
+  path: '/bin/bash'
+  shouldExist: false
+- name: 'No SSH'
+  path: '/usr/bin/ssh'
+  shouldExist: false
