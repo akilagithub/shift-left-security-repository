@@ -23,3 +23,9 @@ tfplan
 
 # direnv
 .envrc
+
+# Code Coverage
+coverage.out
+coverage.html
+test-report.xml
+coverage-report.xml
