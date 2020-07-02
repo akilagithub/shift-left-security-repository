@@ -40,6 +40,6 @@ output cicd-gsa-secret-version {
 }
 
 output "keyring-name" {
-  value = google_kms_key_ring.keyring.name
+  value       = google_kms_key_ring.keyring.name
   description = "Keyring unique name"
 }

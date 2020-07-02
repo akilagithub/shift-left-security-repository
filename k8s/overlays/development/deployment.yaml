@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: hello-world-image
+          env:
+          - name: ENVIRONMENT
+            value: DEVELOPMENT
