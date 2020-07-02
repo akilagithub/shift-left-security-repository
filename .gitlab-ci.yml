@@ -11,23 +11,12 @@ stages:
 variables:
   IMAGE_DETAILS: image-details.txt
 
-test-app:
-  stage: test
-  image: golang:1.13
-  script:
-    - go build -o target/hello-world src/main.go
-  artifacts:
-    expire_in: 30 minutes
-    paths:
-      - target/hello_world # Saved for debugging
-
 build-kritis-image:
   stage: setup-pipeline
   image: docker:19.03.8
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
-    # FULL_IMAGE: gcr.io/${GOOGLE_PROJECT_ID}/kritis-signer
     FULL_IMAGE: "${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/kritis-signer"
   services:
     - docker:19.03.8-dind
@@ -38,6 +27,47 @@ build-kritis-image:
     - docker push ${FULL_IMAGE}
   only:
     - tags
+
+test-coverage-app:
+  stage: test
+  image: golang:1.13
+  before_script:
+    - go get -u github.com/jstemmer/go-junit-report
+    - go get -u github.com/t-yuki/gocover-cobertura
+  script:
+    - cd src
+    - mkdir -p reports
+    # Build the app for compliation
+    - go build -o ${CI_PROJECT_DIR}/src/target/hello-world main.go # run build
+    # Run tests & coverage
+    - go test -v -coverprofile reports/coverage.out > reports/test-results.out
+    # JUnit Test Output Conversion
+    # - export NEW_CI_DIR=$(echo ${CI_PROJECT_DIR} | sed 's/\//\\\//g')
+    # - sed "s/${NEW_CI_DIR}//g" reports/test-results.out > reports/test-results.out
+    - cat reports/test-results.out | go-junit-report > reports/test-report.xml # Run tests, collect coverage output to junit format
+    # Generate Coverage Output
+    - go tool cover -func=reports/coverage.out # display stdout
+    - go tool cover -html=reports/coverage.out -o reports/coverage.html # convert to HTML
+    # Convert to Cobertura for CI logs
+    - gocover-cobertura < reports/coverage.out > reports/coverage-report.xml
+
+    # replace the pathing for cobertura report output
+    - export NEW_CI_DIR=$(echo ${CI_PROJECT_DIR} | sed 's/\//\\\//g')
+    # - sed "s/${NEW_CI_DIR}//g" reports/coverage-report.xml > reports/coverage-report.xml
+    # - sed "s/${NEW_CI_DIR}//g" reports/test-report.xml > reports/test-report.xml
+
+  artifacts:
+    expire_in: 30 minutes
+    paths:
+      - ${CI_PROJECT_DIR}/src/target/hello-world
+      - ${CI_PROJECT_DIR}/src/reports/coverage.html
+      - ${CI_PROJECT_DIR}/src/reports/test-report.xml
+      - ${CI_PROJECT_DIR}/src/reports/coverage.out
+      - ${CI_PROJECT_DIR}/src/reports/test-results.out
+      - ${CI_PROJECT_DIR}/src/reports/coverage-report.xml
+    reports:
+        junit: ${CI_PROJECT_DIR}/src/reports/test-report.xml
+        cobertura: ${CI_PROJECT_DIR}/src/reports/coverage-report.xml
 
 build-app:
   stage: build
