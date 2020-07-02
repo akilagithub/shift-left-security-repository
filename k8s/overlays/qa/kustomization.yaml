@@ -2,6 +2,7 @@ bases:
 - ../../base
 patches:
 - replicas.yaml
+- deployment.yaml
 namespace: default
 commonLabels:
   environment: qa

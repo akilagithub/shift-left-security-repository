@@ -46,13 +46,13 @@ module "project-services" {
 
   # Don't disable the services
   disable_services_on_destroy = false
-  disable_dependent_services = false
+  disable_dependent_services  = false
 
   activate_apis = local.admin_enabled_apis
 }
 
 resource "google_service_account" "cicd-build-gsa" {
-  project = var.project
+  project      = var.project
   account_id   = "cicd-builds"
   display_name = "CICD Pipeline builder Google Service Account (GSA)"
   description  = "GSA for CICD builds and GCR pushes"
@@ -60,9 +60,9 @@ resource "google_service_account" "cicd-build-gsa" {
 
 resource "google_project_iam_member" "permissions" {
   for_each = toset(local.sa-permissions)
-  project = var.project
-  role    = each.value
-  member  = "serviceAccount:${google_service_account.cicd-build-gsa.email}"
+  project  = var.project
+  role     = each.value
+  member   = "serviceAccount:${google_service_account.cicd-build-gsa.email}"
 }
 
 resource "google_service_account_key" "cicd-build-gsa-key" {
@@ -94,9 +94,11 @@ resource "google_secret_manager_secret_version" "cicd-build-gsa-key-secret-versi
 
 
 resource "google_container_cluster" "development" {
+  provider                    = google-beta
   name                        = "bin-auth-dev"
   location                    = var.zone
   enable_binary_authorization = true
+  enable_shielded_nodes       = true
   node_version                = data.google_container_engine_versions.central1b.latest_node_version
   min_master_version          = data.google_container_engine_versions.central1b.latest_node_version
   initial_node_count          = 1
@@ -137,9 +139,11 @@ resource "google_container_cluster" "development" {
 }
 
 resource "google_container_cluster" "qa" {
+  provider                    = google-beta
   name                        = "bin-auth-qa"
   location                    = var.zone
   enable_binary_authorization = true
+  enable_shielded_nodes       = true
   node_version                = data.google_container_engine_versions.central1b.latest_node_version
   min_master_version          = data.google_container_engine_versions.central1b.latest_node_version
   initial_node_count          = 1
@@ -180,9 +184,11 @@ resource "google_container_cluster" "qa" {
 }
 
 resource "google_container_cluster" "production" {
+  provider                    = google-beta
   name                        = "bin-auth-prod"
   location                    = var.zone
   enable_binary_authorization = true
+  enable_shielded_nodes       = true
   node_version                = data.google_container_engine_versions.central1b.latest_node_version
   min_master_version          = data.google_container_engine_versions.central1b.latest_node_version
   initial_node_count          = 1

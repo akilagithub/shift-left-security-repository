@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	_ "path"
+	"strings"
 )
 
 func main() {
@@ -23,7 +25,18 @@ func GetHTTPHandlers() (handlers http.ServeMux) {
 
 // SayHelloHandler handles a response
 func SayHelloHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hi there!")
+
+	currentEnvironment := os.Getenv("ENVIRONMENT")
+
+	var output strings.Builder
+
+	w.Header().Set("Content-Type", "text/html")
+
+	output.WriteString("<html><head><title>Why, hello there!</title></head><body>")
+	output.WriteString("<h1>Hi there!</h1>")
+	output.WriteString(fmt.Sprintf("<h2>Current Environment = %s</h2>", currentEnvironment))
+	output.WriteString("</body><html>")
+	fmt.Fprintf(w, output.String())
 }
 
 // HealthCheckHandler responds with a mocked "ok" (real prod app should do some work here)
