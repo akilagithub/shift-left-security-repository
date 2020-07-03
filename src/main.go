@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	_ "path"
@@ -11,6 +12,7 @@ import (
 
 func main() {
 	handler := GetHTTPHandlers()
+	/* #nosec */
 	http.ListenAndServe(fmt.Sprintf("0.0.0.0:8080"), &handler)
 }
 
@@ -44,5 +46,9 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 
-	io.WriteString(w, `{"alive": true}`)
+	_, err := io.WriteString(w, `{"alive": true}`)
+	if err != nil {
+		// fmt.Errorf("Unable to write to reponse with error: %w", err)
+		log.Fatal(err)
+	}
 }
