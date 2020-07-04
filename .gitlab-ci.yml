@@ -1,3 +1,6 @@
+# Private JOB to inherit common golang image
+.golang-image:
+  image: golang:1.13
 
 stages:
   - setup-pipeline
@@ -28,9 +31,19 @@ build-kritis-image:
   only:
     - tags
 
+scann-for-secrets:
+  stage: test
+  extends:
+    - .golang-image
+  before_script:
+    - go get -u github.com/ezekg/git-hound
+  script:
+    - git-hound -config security/githound.yaml sniff
+
 test-coverage-app:
   stage: test
-  image: golang:1.13
+  extends:
+    - .golang-image
   before_script:
     - go get -u github.com/jstemmer/go-junit-report
     - go get -u github.com/t-yuki/gocover-cobertura
@@ -71,7 +84,8 @@ test-coverage-app:
 
 go-lint:
   stage: test
-  image: golang:1.13
+  extends:
+    - .golang-image
   before_script:
     - go get -u golang.org/x/lint/golint
   script:
@@ -80,7 +94,8 @@ go-lint:
 
 scan-app-code:
   stage: test
-  image: golang:1.13
+  extends:
+    - .golang-image
   allow_failure: true
   before_script:
     - curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b $GOPATH/bin v2.3.0
