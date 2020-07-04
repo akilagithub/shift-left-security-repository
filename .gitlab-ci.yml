@@ -39,7 +39,7 @@ secret-scanner:
     - go get -u github.com/ezekg/git-hound
   script:
     - git-hound -config security/githound.yaml sniff > output.txt
-    - echo output.txt
+    - cat output.txt
 
 test-coverage-app:
   stage: test
