@@ -183,6 +183,17 @@ resource "google_container_cluster" "qa" {
   depends_on = [module.project-services]
 }
 
+resource "google_resource_manager_lien" "lien" {
+  parent       = "projects/${data.google_project.project.number}"
+  restrictions = ["resourcemanager.projects.delete"]
+  origin       = "machine-readable-explanation"
+  reason       = "This project utilizes a public-facing repository for Securing CICD"
+}
+
+data "google_project" "project" {
+    project_id = var.project
+}
+
 resource "google_container_cluster" "production" {
   provider                    = google-beta
   name                        = "bin-auth-prod"
