@@ -8,6 +8,8 @@ import (
 	"os"
 	_ "path"
 	"strings"
+
+	"rsc.io/quote"
 )
 
 func main() {
@@ -36,7 +38,8 @@ func SayHelloHandler(w http.ResponseWriter, r *http.Request) {
 
 	output.WriteString("<html><head><title>Why, hello there!</title></head><body>")
 	output.WriteString("<h1>Hi there!</h1>")
-	output.WriteString(fmt.Sprintf("<h2>Current Environment = %s</h2>", currentEnvironment))
+	output.WriteString(fmt.Sprintf("<h2>Random Quote: %s</h2>", quote.Glass()))
+	output.WriteString(fmt.Sprintf("<h2>Current Environment: %s</h2>", currentEnvironment))
 	output.WriteString("</body><html>")
 	fmt.Fprintf(w, output.String())
 }

@@ -1,4 +1,5 @@
 target/
+pkg/
 
 ### VS Code ###
 .vscode/
