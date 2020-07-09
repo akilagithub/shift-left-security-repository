@@ -85,12 +85,13 @@ validate-licenses:
   before_script:
     - wget https://github.com/mitchellh/golicense/releases/download/v0.2.0/golicense_0.2.0_linux_x86_64.tar.gz
     - tar -xzf golicense_0.2.0_linux_x86_64.tar.gz
+    - mv golicense /usr/local/bin/golicense
   script:
     - cd src
     - mkdir -p ${CI_PROJECT_DIR}/reports
     # Build the app for compliation
     - go build -o hello-world-license .
-    - ./golicense -plain -out-xlsx ${CI_PROJECT_DIR}/reports/license-report.xlsx ../security/license-policy.hcl hello-world-license
+    - golicense -plain -out-xlsx ${CI_PROJECT_DIR}/reports/license-report.xlsx ../security/license-policy.hcl hello-world-license
   artifacts:
     expire_in: 1 day
     paths:
