@@ -90,7 +90,7 @@ validate-licenses:
     - mkdir -p ${CI_PROJECT_DIR}/reports
     # Build the app for compliation
     - go build -o hello-world-license .
-    - golicense -plain -out-xlsx ${CI_PROJECT_DIR}/reports/license-report.xlsx ../security/license-policy.hcl hello-world-license
+    - ./golicense -plain -out-xlsx ${CI_PROJECT_DIR}/reports/license-report.xlsx ../security/license-policy.hcl hello-world-license
   artifacts:
     expire_in: 1 day
     paths:
