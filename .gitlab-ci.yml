@@ -1,6 +1,3 @@
-# Private JOB to inherit common golang image
-.golang-image:
-  image: golang:1.13
 
 stages:
   - setup-pipeline
@@ -168,45 +165,14 @@ container-structure:
     - docker pull ${IMAGE}:${TAG}
     - ./container-structure-test test --image "${IMAGE}:${TAG}" --config security/container-structure-policy.yaml
 
-security-audit:
+security-acceptance:
   stage: security-review
-  image: google/cloud-sdk:debian_component_based
+  allow_failure: false
+  when: manual
   variables:
     ACTOR: "security"
-  before_script:
-    - mkdir -p keys
-    - mkdir -p tmp
-    - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
-    - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
-    - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
-  script:
-    - export KEYRING_NAME="$(gcloud secrets versions access latest --secret='keyring-name')"
-    # kms keyrings list produces a long string including the project and location, the below command only uses the keyring name
-    - export KEYRING_NAME="${KEYRING_NAME##*/}"
-    # Extract Image Path and Image Digest from generated file during image creation
-    - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
-    # - gcloud kms keys versions get-public-key key-version --location us-central1  --keyring ${KEYRING_NAME} --key ${ACTOR}-attestor-key --output-file ./output.pub
-    - export PUBLIC_KEY_ID=$(gcloud container binauthz attestors describe ${ACTOR}-attestor --format='value(userOwnedGrafeasNote.publicKeys[0].id)')
-    # Create the file to sign
-    - gcloud container binauthz create-signature-payload --artifact-url=${IMAGE_DIGEST} > ${CI_PROJECT_DIR}/tmp/generated_payload.json
-    # Sign generated_payload.json with KMS
-    - |
-        gcloud kms asymmetric-sign \
-        --location us-central1 \
-        --keyring ${KEYRING_NAME} \
-        --key ${ACTOR}-attestor-key \
-        --version 1 \
-        --digest-algorithm sha512 \
-        --input-file ${CI_PROJECT_DIR}/tmp/generated_payload.json \
-        --signature-file ${CI_PROJECT_DIR}/tmp/ec_signature
-
-    # Create attestation
-    - |
-      gcloud container binauthz attestations create \
-        --artifact-url="${IMAGE_DIGEST}" \
-        --attestor="projects/${GOOGLE_PROJECT_ID}/attestors/${ACTOR}-attestor" \
-        --signature-file=${CI_PROJECT_DIR}/tmp/ec_signature \
-        --public-key-id="${PUBLIC_KEY_ID}"
+  extends:
+    - .create-attestation
   artifacts:
     expire_in: 24 hours
     paths:
@@ -285,43 +251,10 @@ accept-development:
   stage: development
   when: manual
   allow_failure: false
-  image: google/cloud-sdk:debian_component_based
   variables:
     ACTOR: "build"
-  before_script:
-    - mkdir -p keys
-    - mkdir -p tmp
-    - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
-    - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
-    - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
-  script:
-    - export KEYRING_NAME="$(gcloud secrets versions access latest --secret='keyring-name')"
-    # kms keyrings list produces a long string including the project and location, the below command only uses the keyring name
-    - export KEYRING_NAME="${KEYRING_NAME##*/}"
-    # Extract Image Path and Image Digest from generated file during image creation
-    - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
-    # - gcloud kms keys versions get-public-key key-version --location us-central1  --keyring ${KEYRING_NAME} --key ${ACTOR}-attestor-key --output-file ./output.pub
-    - export PUBLIC_KEY_ID=$(gcloud container binauthz attestors describe ${ACTOR}-attestor --format='value(userOwnedGrafeasNote.publicKeys[0].id)')
-    # Create the file to sign
-    - gcloud container binauthz create-signature-payload --artifact-url=${IMAGE_DIGEST} > ${CI_PROJECT_DIR}/tmp/generated_payload.json
-    # Sign generated_payload.json with KMS
-    - |
-        gcloud kms asymmetric-sign \
-        --location us-central1 \
-        --keyring ${KEYRING_NAME} \
-        --key ${ACTOR}-attestor-key \
-        --version 1 \
-        --digest-algorithm sha512 \
-        --input-file ${CI_PROJECT_DIR}/tmp/generated_payload.json \
-        --signature-file ${CI_PROJECT_DIR}/tmp/ec_signature
-
-    # Create attestation
-    - |
-      gcloud container binauthz attestations create \
-        --artifact-url="${IMAGE_DIGEST}" \
-        --attestor="projects/${GOOGLE_PROJECT_ID}/attestors/${ACTOR}-attestor" \
-        --signature-file=${CI_PROJECT_DIR}/tmp/ec_signature \
-        --public-key-id="${PUBLIC_KEY_ID}"
+  extends:
+    - .create-attestation
 
 #### Required Attestation is "security" and "build"
 deploy-QA:
@@ -358,46 +291,12 @@ deploy-QA:
 
 accept-QA:
   stage: QA
-  image: google/cloud-sdk:debian_component_based
   when: manual
   allow_failure: false
   variables:
     ACTOR: "quality"
-  before_script:
-    - mkdir -p keys
-    - mkdir -p tmp
-    - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
-    - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
-    - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
-  script:
-    - export KEYRING_NAME="$(gcloud secrets versions access latest --secret='keyring-name')"
-    # kms keyrings list produces a long string including the project and location, the below command only uses the keyring name
-    - export KEYRING_NAME="${KEYRING_NAME##*/}"
-    # Extract Image Path and Image Digest from generated file during image creation
-    - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
-    # - gcloud kms keys versions get-public-key key-version --location us-central1  --keyring ${KEYRING_NAME} --key ${ACTOR}-attestor-key --output-file ./output.pub
-    - export PUBLIC_KEY_ID=$(gcloud container binauthz attestors describe ${ACTOR}-attestor --format='value(userOwnedGrafeasNote.publicKeys[0].id)')
-    # Create the file to sign
-    - gcloud container binauthz create-signature-payload --artifact-url=${IMAGE_DIGEST} > ${CI_PROJECT_DIR}/tmp/generated_payload.json
-    # Sign generated_payload.json with KMS
-    - |
-        gcloud kms asymmetric-sign \
-        --location us-central1 \
-        --keyring ${KEYRING_NAME} \
-        --key ${ACTOR}-attestor-key \
-        --version 1 \
-        --digest-algorithm sha512 \
-        --input-file ${CI_PROJECT_DIR}/tmp/generated_payload.json \
-        --signature-file ${CI_PROJECT_DIR}/tmp/ec_signature
-
-    # Create attestation
-    - |
-      gcloud container binauthz attestations create \
-        --artifact-url="${IMAGE_DIGEST}" \
-        --attestor="projects/${GOOGLE_PROJECT_ID}/attestors/${ACTOR}-attestor" \
-        --signature-file=${CI_PROJECT_DIR}/tmp/ec_signature \
-        --public-key-id="${PUBLIC_KEY_ID}"
-
+  extends:
+    - .create-attestation
   # only:
   #   refs:
   #     - master
@@ -433,3 +332,49 @@ deploy-production:
   # only:
   #   refs:
   #     - master
+
+
+###################################################################
+###################################################################
+# Private JOB to inherit common golang image
+.golang-image:
+  image: golang:1.13
+
+# Creates an attestation based on the ACTOR variable
+.create-attestation:
+  image: google/cloud-sdk:debian_component_based
+  variables:
+    ACTOR: "OVERRIDEME"
+  before_script:
+    - mkdir -p keys
+    - mkdir -p tmp
+    - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
+    - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
+    - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+  script:
+    - export KEYRING_NAME="$(gcloud secrets versions access latest --secret='keyring-name')"
+    # kms keyrings list produces a long string including the project and location, the below command only uses the keyring name
+    - export KEYRING_NAME="${KEYRING_NAME##*/}"
+    # Extract Image Path and Image Digest from generated file during image creation
+    - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
+    # - gcloud kms keys versions get-public-key key-version --location us-central1  --keyring ${KEYRING_NAME} --key ${ACTOR}-attestor-key --output-file ./output.pub
+    - export PUBLIC_KEY_ID=$(gcloud container binauthz attestors describe ${ACTOR}-attestor --format='value(userOwnedGrafeasNote.publicKeys[0].id)')
+    # Create the file to sign
+    - gcloud container binauthz create-signature-payload --artifact-url=${IMAGE_DIGEST} > ${CI_PROJECT_DIR}/tmp/generated_payload.json
+    # Sign generated_payload.json with KMS
+    - |
+        gcloud kms asymmetric-sign \
+        --location us-central1 \
+        --keyring ${KEYRING_NAME} \
+        --key ${ACTOR}-attestor-key \
+        --version 1 \
+        --digest-algorithm sha512 \
+        --input-file ${CI_PROJECT_DIR}/tmp/generated_payload.json \
+        --signature-file ${CI_PROJECT_DIR}/tmp/ec_signature
+    # Create attestation
+    - |
+      gcloud container binauthz attestations create \
+        --artifact-url="${IMAGE_DIGEST}" \
+        --attestor="projects/${GOOGLE_PROJECT_ID}/attestors/${ACTOR}-attestor" \
+        --signature-file=${CI_PROJECT_DIR}/tmp/ec_signature \
+        --public-key-id="${PUBLIC_KEY_ID}"
