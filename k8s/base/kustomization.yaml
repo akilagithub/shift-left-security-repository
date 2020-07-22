@@ -2,4 +2,5 @@ commonLabels:
   app: hello-world-app
 resources:
 - deployment.yaml
+- ingress.yaml
 - service.yaml

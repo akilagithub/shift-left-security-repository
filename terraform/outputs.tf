@@ -43,3 +43,15 @@ output "keyring-name" {
   value       = google_kms_key_ring.keyring.name
   description = "Keyring unique name"
 }
+
+output "eip-development-ingress" {
+  value = length(google_compute_global_address.development-ingress) > 0 ? google_compute_global_address.development-ingress[0].address : null
+}
+
+output "eip-qa-ingress" {
+  value = length(google_compute_global_address.qa-ingress) > 0 ? google_compute_global_address.qa-ingress[0].address : null
+}
+
+output "eip-production-ingress" {
+  value = length(google_compute_global_address.prod-ingress) > 0 ? google_compute_global_address.prod-ingress[0].address : null
+}

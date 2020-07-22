@@ -3,6 +3,7 @@ bases:
 patches:
 - replicas.yaml
 - deployment.yaml
+- ingress.yaml
 namespace: default
 commonLabels:
   environment: qa
