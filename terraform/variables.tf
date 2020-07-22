@@ -18,6 +18,12 @@ variable zone {
 
 variable gke-version {
   type        = string
-  default     = "1.15."
+  default     = "1.16."
   description = "GKE Version"
+}
+
+variable "ingress-ip-addresses" {
+  type        = bool
+  description = "Create static IP addresses for Ingress controllers (optional)"
+  default     = false
 }

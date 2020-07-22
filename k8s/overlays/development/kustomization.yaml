@@ -3,8 +3,8 @@ kind: Kustomization
 patchesStrategicMerge:
 - resource-limits.yaml
 - deployment.yaml
+- ingress.yaml
 namespace: default
-namePrefix: dev-
 commonLabels:
   environment: development
 resources:

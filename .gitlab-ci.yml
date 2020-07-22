@@ -1,5 +1,8 @@
 
 stages:
+  - infrastructure-setup
+  - infrastructure-plan
+  - infrastructure-apply
   - setup-pipeline
   - test
   - build
@@ -10,6 +13,8 @@ stages:
 
 variables:
   IMAGE_DETAILS: image-details.txt
+  TF_ROOT: ${CI_PROJECT_DIR}/terraform
+  TERRAFORM_IMAGE_VERSION: 0.12.28
 
 build-kritis-image:
   stage: setup-pipeline
@@ -333,6 +338,53 @@ deploy-production:
   #   refs:
   #     - master
 
+
+
+################################### Infrastructure
+.terraform-base:
+  image:
+    name: hashicorp/terraform:$TERRAFORM_IMAGE_VERSION
+    entrypoint:
+      - '/usr/bin/env'
+      - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  before_script:
+    - cd ${TF_ROOT}
+    - rm -rf .terraform/ || true
+    - mkdir -p ${CI_PROJECT_DIR}/keys
+    - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
+    - FILE=${CI_PROJECT_DIR}/keys/key-file.json
+    - if [ ! -f "$FILE" ]; then echo "Key file does not exist, exiting" && exit 1; fi
+    - terraform init -backend-config="credentials=${FILE}"
+
+setup-infrastructure:
+  stage: infrastructure-setup
+  extends:
+  - .terraform-base
+  script:
+  - terraform plan
+  only:
+    refs:
+      - tags
+
+plan-infrastructure:
+  stage: infrastructure-plan
+  extends:
+  - .terraform-base
+  script:
+  - terraform plan
+  only:
+    refs:
+      - tags
+
+apply-infrastructure:
+  stage: infrastructure-apply
+  extends:
+  - .terraform-base
+  script:
+  - terraform plan
+  only:
+    refs:
+      - tags
 
 ###################################################################
 ###################################################################

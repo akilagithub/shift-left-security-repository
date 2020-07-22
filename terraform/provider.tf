@@ -8,6 +8,13 @@ provider "google-beta" {
   region  = "us-central1"
 }
 
+terraform {
+  backend "gcs" {
+    bucket  = "binary-authorization-state"
+    prefix  = "terraform/state"
+  }
+}
+
 provider "random" {
 
 }
