@@ -36,7 +36,7 @@ func SayHelloHandler(w http.ResponseWriter, r *http.Request) {
 
 	output.WriteString(fmt.Sprintf("<html><head><title>Why, hello there! - %s</title></head><body>", currentEnvironment))
 
-	output.WriteString("<h1>Hi Mike!</h1>")                                     // ##_CHANGE ME_##
+	output.WriteString("<h1>Hi AppTeam!</h1>")                                     // ##_CHANGE ME_##
 
 	output.WriteString(fmt.Sprintf("<h2>Random Quote: %s</h2>", quote.Glass())) // Opt()
 	output.WriteString(fmt.Sprintf("<h2>Current Environment: %s</h2>", currentEnvironment))

@@ -40,7 +40,7 @@ func TestHello(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	expected := `Hi Mike!` // ##_CHANGE ME_##
+	expected := `Hi AppTeam!` // ##_CHANGE ME_##
 
 	result := rr.Body.String()
 
