@@ -1,12 +1,16 @@
 # Overview
 
-The purpose of this repository is to demonstrate a CICD flow using a build-up of Binary Authorization Attestations with multiple Attestors
+The purpose of this repository is to demonstrate best practices for securing a CICD pipeline.
+
+This repository addresses multiple layers to apply different techniques for securing a pipeline. The emphasis is on the tools and methods that can be applied onto or within a CICD pipeline and should not be used as the sole security measure, but applied along-side a comprehensive security strategy.
+
+
 
 ## Requirements
 
-* GCP Project ID where the project has an active billing account associated with it
+* **GCP Project ID** where the project has an active billing account associated with it
 * `gcloud` CLI installed, authorized and setup to use selected project ID
-* Terraform 0.12+
+* Terraform 0.12.x
 
 ## Binary Authorization CICD Flow
 
@@ -49,19 +53,40 @@ sequenceDiagram
 
     > NOTE the first run **MAY** fail due to eventual consistency with enabling APIs.  Just re-run if you see an error similar to this: "api not enabled, if it was just enabled, wait for a few minutes". Future updates may fix this.
 
-1. Add your name to the `src/main.rs` in place of "World". Here's an example:
-    ```rust
-    #[get("/")]
-    fn hello() -> &'static str {
-        "Hello, Mike!"
-    }
+1. Add your name to the `src/main.go` in place of "Mike". Here's an example:
+    ```golang
+        func SayHelloHandler(w http.ResponseWriter, r *http.Request) {
+            var output strings.Builder
+            //...omitted for clarity
+            //...
+            output.WriteString("<h1>Hi Mike!</h1>") // ##_CHANGE ME_##
+            //...
+            //...omitted for clarity
+        }
+    ```
+
+1. Update the unit test `src/main_test.go` in place of "Mike". Here's an example:
+    ```golang
+        func TestHello(t *testing.T) {
+            //...omitted for clarity
+            //...
+            expected := `Hi Mike!` // ##_CHANGE ME_##
+
+            result := rr.Body.String()
+
+            if !strings.ContainsAny(result, expected) {
+                t.Errorf("handler returned unexpected body: got %v want %v",
+                    rr.Body.String(), expected)
+            }
+        }
     ```
 
 1. Commit and push changes to the repository
     1. `git commit -a -m 'personalizing the app' && git push -u origin master`
 
-1. Watch the CI/CD Pipeline from within Gitlab
+1. Watch the [CI/CD Pipeline](-/pipelines) from within Gitlab
 
+1. Approve "Security", "Development", "QA" stages of the build
 
 ## Setting up CI
 
@@ -71,9 +96,9 @@ The jobs are configured to run based on the infrastructure created. CICD pipelin
 
 The CI needs to utilize thg Google Service Account (GSA) created in the infrastructure/terraform **BEFORE** running the CICD job is run (pre-check on CICD is enabled to avoid false-negative builds)
 
-### Setting up the CICD Variables
+### Setting up the Infrastructre
 
-There are two CI/CD variables used in the pipeline:  GOOGLE_BUILD_GSA and GOOGLE_PROJECT_ID
+There are two CI/CD variables used in the pipeline:  `GOOGLE_BUILD_GSA` and `GOOGLE_PROJECT_ID`
 
 1. Fork this repository (fork, not clone so you run in your own CICD space)
     * CICD needs to be enabled and configured for running within Gitlab (this short tutorial assumes this has been completed)
@@ -91,14 +116,16 @@ There are two CI/CD variables used in the pipeline:  GOOGLE_BUILD_GSA and GOOGLE
 
 # Resource Usage
 
-This repository creates 3 GKE instances, utilizes KMS keys for the attestors, a Secret in the Secrets Manager and a small set of other infrastructure related to the project.
+This repository creates 3 GKE instances, creates a GCLB Ingress, utilizes KMS keys for the attestors, a Secret in the Secrets Manager and a small set of other infrastructure related to the project.
 
-    > :warning: DO NOT assume this project can run under the "free-tier" for GCP, but if run in isolation and at short periods at a time, the costs should be very minimal
+:warning: This project will **NOT** run within the "free-tier" for GCP, but if run in isolation and at short periods at a time, the costs should be very minimal
 
-    > :warning: Each instance is a small GKE instance and are **NOT** intended to be ready for production.  The purpose is to demonstrate a deployment sequence, NOT how to configure GKE clusters
+:warning: Each instance is a small GKE instance and are **NOT** intended to be ready for production. The purpose is to demonstrate a deployment sequence, NOT how to configure GKE clusters
 
 
 # Logging / Metrics
+
+Logging is automatically pulled into Stackdrive. The policy for Binary Authorization is configured to log/audit and deny when attestations are not present. An additional exercise can setup a custom metric and report on failed attestation assertions.
 
 Creating a metric for the number of denied containers due to the policy can be created using the following formula in Stackdriver:
 

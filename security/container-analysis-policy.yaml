@@ -8,4 +8,4 @@ spec:
     maximumUnfixableSeverity: LOW
     allowlistCVEs:
     - projects/goog-vulnz/notes/CVE-2020-10543
-    - projects/goog-vulnz/notes/CVE-2020-1751 # Known MEDIUM defect in golang:1.13-buster, comment out to trigger pipeline failure
+    - projects/goog-vulnz/notes/CVE-2020-1751               # Known MEDIUM defect in golang:1.13-buster, comment out to trigger pipeline failure

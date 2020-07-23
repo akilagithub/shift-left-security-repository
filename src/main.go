@@ -29,18 +29,20 @@ func GetHTTPHandlers() (handlers http.ServeMux) {
 
 // SayHelloHandler handles a response
 func SayHelloHandler(w http.ResponseWriter, r *http.Request) {
-
-	currentEnvironment := os.Getenv("ENVIRONMENT")
-
 	var output strings.Builder
 
+	currentEnvironment := os.Getenv("ENVIRONMENT")
 	w.Header().Set("Content-Type", "text/html")
 
-	output.WriteString("<html><head><title>Why, hello there!</title></head><body>")
-	output.WriteString("<h1>Hi there!</h1>")
-	output.WriteString(fmt.Sprintf("<h2>Random Quote: %s</h2>", quote.Glass()))
+	output.WriteString(fmt.Sprintf("<html><head><title>Why, hello there! - %s</title></head><body>", currentEnvironment))
+
+	output.WriteString("<h1>Hi Mike!</h1>")                                     // ##_CHANGE ME_##
+
+	output.WriteString(fmt.Sprintf("<h2>Random Quote: %s</h2>", quote.Glass())) // Opt()
 	output.WriteString(fmt.Sprintf("<h2>Current Environment: %s</h2>", currentEnvironment))
 	output.WriteString("</body><html>")
+
+	// write output to stream
 	fmt.Fprintf(w, output.String())
 }
 

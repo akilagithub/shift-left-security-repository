@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -41,15 +40,14 @@ func TestHello(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	expected := `Hi there`
+	expected := `Hi Mike!` // ##_CHANGE ME_##
+
 	result := rr.Body.String()
 
-	if !strings.ContainsAny(result, expected) {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+	if !strings.Contains(result, expected) {
+		t.Errorf("handler did not find substring [%v] -- got [%v]\n\nPerhaps the 'name' was changed in the main.go and the expected variable was not changed to match?\n",
+			expected, rr.Body.String())
 	}
-
-	fmt.Println("HERE")
 }
 
 func TestHealthCheckHandler(t *testing.T) {
