@@ -260,6 +260,9 @@ accept-development:
     ACTOR: "build"
   extends:
     - .create-attestation
+  only:
+    refs:
+      - master
 
 #### Required Attestation is "security" and "build"
 deploy-QA:
@@ -290,9 +293,9 @@ deploy-QA:
     - sleep 3s
     - export ERRORS=$(kubectl get event --field-selector reason=FailedCreate | grep "${IMAGE_DIGEST}")
     - if [ ! -z "$ERRORS" ]; then echo "Failed Deployment" && echo "${ERRORS}" && exit 1; fi
-  # only:
-  #   refs:
-  #     - master
+  only:
+    refs:
+      - master
 
 accept-QA:
   stage: QA
@@ -302,9 +305,9 @@ accept-QA:
     ACTOR: "quality"
   extends:
     - .create-attestation
-  # only:
-  #   refs:
-  #     - master
+  only:
+    refs:
+      - master
 
 deploy-production:
   stage: prod
@@ -334,9 +337,9 @@ deploy-production:
     - sleep 3s
     - export ERRORS=$(kubectl get event --field-selector reason=FailedCreate | grep "${IMAGE_DIGEST}")
     - if [ ! -z "$ERRORS" ]; then echo "Failed Deployment" && echo "${ERRORS}" && exit 1; fi
-  # only:
-  #   refs:
-  #     - master
+  only:
+    refs:
+      - master
 
 
 
