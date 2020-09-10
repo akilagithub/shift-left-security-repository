@@ -10,6 +10,7 @@ locals {
     "binaryauthorization.googleapis.com",
     "container.googleapis.com",
     "cloudkms.googleapis.com",
+    "anthos.googleapis.com",
     "secretmanager.googleapis.com",
     "containerscanning.googleapis.com"
   ]
