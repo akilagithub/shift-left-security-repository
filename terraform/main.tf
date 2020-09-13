@@ -192,7 +192,7 @@ resource "google_resource_manager_lien" "lien" {
 }
 
 data "google_project" "project" {
-    project_id = var.project
+  project_id = var.project
 }
 
 resource "google_container_cluster" "production" {

@@ -9,12 +9,15 @@ provider "google-beta" {
 }
 
 terraform {
-  backend "gcs" {
-    bucket  = "binary-authorization-state"
-    prefix  = "terraform/state"
+  # Authentication provided by ~/.terraformrc credentails configuration
+  backend "remote" {
+
+    organization = "google-cloud-solution-architects"
+
+    workspaces {
+      name = "secure-cicd-blueprint"
+    }
   }
 }
 
-provider "random" {
-
-}
+provider "random" {}
