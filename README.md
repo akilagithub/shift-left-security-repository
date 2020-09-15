@@ -135,6 +135,8 @@ There are two CI/CD variables used in the pipeline:  `GOOGLE_BUILD_GSA` and `GOO
 
 This project is setup to ensure all commits are signed using GPG [as described in this documentation](https://gitlab.com/help/user/project/repository/gpg_signed_commits/index.md).
 
+>Note: Typing in your passphrase might need a TTY and can be set by using an enviornment variable: `export GPG_TTY=$(tty)` (best to add to .bashrc or shell configuration)
+
 ### Commit Format
 
 ```bash
