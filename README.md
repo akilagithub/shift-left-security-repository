@@ -131,6 +131,17 @@ There are two CI/CD variables used in the pipeline:  `GOOGLE_BUILD_GSA` and `GOO
 1. Once verified both GOOGLE_BUILD_GSA and GOOGLE_PROJECT_ID are created, continue
 1. Run the CICD Pipeline by making a change to the code or manually triggering via "CI/CD > Run Pipeline > Run"
 
+# Signed Git Commits
+
+This project is setup to ensure all commits are signed using GPG [as described in this documentation](https://gitlab.com/help/user/project/repository/gpg_signed_commits/index.md).
+
+### Commit Format
+
+```bash
+git commit -a -S -m 'Signed commit'
+# supply passphrase if needed (recommend setting up a passphrase)
+```
+
 # Resource Usage
 
 This repository creates 3 GKE instances, creates a GCLB Ingress, utilizes KMS keys for the attestors, a Secret in the Secrets Manager and a small set of other infrastructure related to the project.
