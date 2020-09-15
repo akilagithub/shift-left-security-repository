@@ -1,0 +1,7 @@
+# Reference codes: https://github.com/hadolint/hadolint
+ignored:
+  - SC1010
+
+trustedRegistries:
+  - docker.io
+  - gcr.io

@@ -33,6 +33,16 @@ build-kritis-image:
   only:
     - tags
 
+dockerfile-lint:
+  stage: test
+  variables:
+    HADOLINT_VERSION: "1.18.0"
+  before_script:
+  - wget -O hadolint https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64
+  - chmod +x hadolint
+  script:
+  - ./hadolint --config security/hadolint.yaml Dockerfile
+
 secret-scanner:
   stage: test
   extends:
