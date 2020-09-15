@@ -223,6 +223,7 @@ deploy-development:
     entrypoint: [""]
   environment:
     name: development
+    url: http://dev.secure.ensor-labs.com
   variables:
     ACTOR: "security"
   before_script:
@@ -283,6 +284,7 @@ deploy-QA:
   when: on_success
   environment:
     name: qa
+    url: http://qa.secure.ensor-labs.com
   before_script:
     - mkdir -p keys
     - mkdir -p tmp
@@ -327,6 +329,7 @@ deploy-production:
   when: on_success
   environment:
     name: prod
+    url: http://prod.secure.ensor-labs.com
   before_script:
     - mkdir -p keys
     - mkdir -p tmp
