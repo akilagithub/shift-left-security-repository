@@ -10,6 +10,6 @@ RUN go get -d -v ./...
 RUN go build -o /go/bin/app
 
 # Now copy it into our base image.
-FROM gcr.io/distroless/base-debian10
+FROM gcr.io/distroless/base-debian10:nonroot
 COPY --from=build /go/bin/app /
 CMD ["/app"]
