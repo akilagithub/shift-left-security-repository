@@ -34,7 +34,7 @@ func SayHelloHandler(w http.ResponseWriter, r *http.Request) {
 	currentEnvironment := os.Getenv("ENVIRONMENT")
 	w.Header().Set("Content-Type", "text/html")
 
-	output.WriteString(fmt.Sprintf("<html><head><title>Why, hello there! - %s</title></head><body>", currentEnvironment))
+	output.WriteString(fmt.Sprintf("<html><head><title>HI ALL hello there! - %s</title></head><body>", currentEnvironment))
 
 	output.WriteString("<h1>Hi AppTeam!</h1>")                                     // ##_CHANGE ME_##
 
