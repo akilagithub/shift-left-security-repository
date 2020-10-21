@@ -172,3 +172,5 @@ jsonPayload.message=~"image policy webhook backend denied one or more images" AN
     > :warning: NOTE, replace [PROJECT_ID] with the real Google project ID. The "location" and "cluster_name" are defaults for this project, change as needed to accommodate the appropriate cluster
 
 Once the logs are visible, select "Create Metric" and fill in the relevant information and save.  Allow time for the metrics to be counted/indexed (up to 24h). During this time, create an Alert based on the metric for a reasonable amount of failure.
+
+###### Last Updated Oct-21-2020
