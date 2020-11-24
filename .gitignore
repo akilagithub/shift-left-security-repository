@@ -34,3 +34,7 @@ coverage-report.xml
 docs/*.png
 docs/*.jpg
 docs/*.gif
+
+*.pub
+*.pgp
+*.txt
