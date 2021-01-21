@@ -1,0 +1,12 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '-t', 'gcr.io/${PROJECT_ID}/kritis-signer', '.' ]
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/${PROJECT_ID}/kritis-signer']
+
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args: ['gsutil', 'iam', 'ch', 'allUsers:objectViewer', 'gs://artifacts.${PROJECT_ID}.appspot.com']
+
+  # gsutil iam ch allUsers:objectViewer gs://artifacts.${PROJECT_ID}.appspot.com
+  # gsutil iam ch allUsers:objectViewer gs://BUCKET-NAME
+

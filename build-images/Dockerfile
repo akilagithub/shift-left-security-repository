@@ -1,5 +1,5 @@
 # Start by building the application.
-FROM golang:1.14-buster as build
+FROM golang:1.15-buster as build
 
 # Install gcloud (for authentication to GCR)
 ENV CLOUDSDK_INSTALL_DIR /usr/local/gcloud/
@@ -8,7 +8,7 @@ ENV PATH $PATH:/usr/local/gcloud/google-cloud-sdk/bin
 
 # Install kritis
 WORKDIR /go/src
-RUN git clone --branch policy-check-v1.0.0 https://github.com/grafeas/kritis
+RUN git clone https://github.com/grafeas/kritis
 RUN mv kritis app
 RUN go get -d -v ./...
 WORKDIR /go/src/app
