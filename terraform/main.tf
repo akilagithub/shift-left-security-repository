@@ -41,7 +41,7 @@ data "google_container_engine_versions" "central1b" {
 
 module "project-services" {
   source  = "terraform-google-modules/project-factory/google//modules/project_services"
-  version = "~> 8.0"
+  version = ">= 10.1.0"
 
   project_id = var.project
 
