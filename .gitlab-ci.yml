@@ -1,5 +1,6 @@
 
 stages:
+  - debugging
   - infrastructure-setup
   - infrastructure-plan
   - infrastructure-apply
@@ -198,6 +199,29 @@ image-scan-vulnerabilities:
       -vulnz_timeout=1m \
       -mode=check-only || error=true
     - if [[ $error == true ]]; then echo "Container Analysis failed due to CVE thresholds being triggered"; exit 1; fi
+
+gatekeeper-validation:
+  stage: security-review
+  image:
+    name: gcr.io/kpt-dev/kpt
+    entrypoint: [""]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+  services:
+    - docker:19.03.8-dind
+  before_script:
+    - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
+    - apk add curl
+    - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+  script:
+    - cd ${CI_PROJECT_DIR}/k8s/overlays/development
+    - ${CI_PROJECT_DIR}/kustomize edit set image busybox="${IMAGE_DIGEST}"
+    - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/development/hydrated-manifests.yaml
+    # Pull down the Gatekeeper library general policies
+    - ${CI_PROJECT_DIR}/kustomize build https://github.com/open-policy-agent/gatekeeper-library/library/general > ${CI_PROJECT_DIR}/k8s/overlays/development/generated-policies.yaml
+    # Combine policies + hydrated manifests (ignore stdout output, still display stderr)
+    - kpt fn source ${CI_PROJECT_DIR}/k8s/overlays/development/hydrated-manifests.yaml ${CI_PROJECT_DIR}/k8s/overlays/development/generated-policies.yaml | kpt fn run --image gcr.io/kpt-functions/gatekeeper-validate  1>/dev/null
 
 deploy-development:
   stage: development
