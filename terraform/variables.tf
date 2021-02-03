@@ -15,7 +15,6 @@ variable zone {
   description = "GKE Node Zone"
 }
 
-
 variable gke-version {
   type        = string
   default     = "1.16."

@@ -16,6 +16,7 @@ service-account-key.json
 .terraform/
 terraform.tfvars
 tfplan
+.terraform.lock.hcl
 
 *.crt
 *.key
@@ -30,10 +31,6 @@ coverage.out
 coverage.html
 test-report.xml
 coverage-report.xml
-
-docs/*.png
-docs/*.jpg
-docs/*.gif
 
 *.pub
 *.pgp

@@ -1,74 +1,44 @@
 # Overview
 
-The purpose of this repository is to demonstrate best practices for securing a CICD pipeline.
+The purpose of this repository is to demonstrate best practices for securing a CI/CD pipeline.
 
-This repository addresses multiple layers to apply different techniques for securing a pipeline. The emphasis is on the tools and methods that can be applied onto or within a CICD pipeline and should not be used as the sole security measure, but applied along-side a comprehensive security strategy.
+This repository addresses multiple layers to apply different techniques for securing a pipeline. The emphasis is on the tools and methods that can be applied onto or within a CI/CD pipeline and should not be used as the sole security measure, but applied along-side a comprehensive security strategy.
 
-## CICD Pipeline
-
-```mermaid
-%%{init: { 'theme': 'dark' } }%%
-graph TD
-
-  FR[Feature Branch]
-  CODECHECK[Code Quality]
-  PRI[Primary Branch]
-  SECURITY[[Security Attestation]]
-  BUILD[Build & Test]
-  IMG[Build Image]
-  AR[Artifact Repo]
-
-  START((START)) -->|create feature branch| FR
-
-  subgraph CODE [Feature Development]
-    FR -->|"Lint/Test Coverage<br/>/License/SAST"| CODECHECK
-    FR -->|Changes| PRI
-    PRI -->|Feedback| FR
-    PRI -->|Submit MR/PR| BUILD
-    BUILD --> CODECHECK
-  end
-
-  subgraph CI [Continuous Integration]
-    BUILD --> IMG
-    IMG -->|Structure| SECURITY
-    IMG -->|push version| AR(Artifact Repository)
-    AR -->|CVE| SECURITY
-  end
-
-  AR -->|automated trigger| DEV
-  MANUAL{{Optional: Manual Action}} -->|manually initiated| DEV
-
-  subgraph CD [Continuous Delivery]
-    DEV(Deploy Enviroment:DEV) -->|Get version| AR
-    DEV -->|Developers validate| DEV_OK(DEV Passed)
-    DEV_OK -->|"Create Attestation<br/>Manual or Automated Process"| DEV_ATT[[Development Attestation]]
-    DEV_OK -->|optional manual trigger| QA
-    QA[Deploy Environment: QA] -->|QA validates| QA_OK(QA Verified)
-    QA_OK[QA Verified] --> QA_ATT[[QA Attestation]]
-    QA_OK[QA Passed] -->|optional manual trigger| PROD(Deploy Environment: Prod)
-  end
-
-```
+:warning: Please fork this repository so-as to create your own CI/CD pipeline and also to push commits triggering the CI/CD pipeline
 
 ## Requirements
 
 * **GCP Project ID** where the project has an active billing account associated with it
 * `gcloud` CLI installed, authorized and setup to use selected project ID
-* Terraform 0.12.x
+* Terraform 0.13+
 
 ## Binary Authorization CICD Flow
 
 [Sequence Diagram](docs/BINARY_AUTHORIZATION.md)
 
-# Running
+# Running Scenario
+
+The scenario is that you are on a team with an existing CI/CD pipeline. Your company has provided tooling so your application can stay within company security compliance rules. The [pipeline design is found here](docs/pipeline-definition.md).
+
+Your task is to push a new version of the application from DEV environment to QA and on to Production.
+
+## Infrastructure (one-time setup)
 
 1. Setup the Infrastructure (manually)
-    1. `cd terraform`
-    1. `terraform init`
-    1. `terraform plan -out tfplan`
-    1. `terraform apply tfplan`
+    1. Create a GCS bucket to hold the Terraform remote state
+    1. View the `vars.sh` and set the following variables:
+        1. `GOOGLE_PROJECT_ID` to match the expected Google project ID. If you are using `gcloud` and the current configuration uses the same project, just leave this variable alone.
+        1. Set the `TF_STATE_BUCKET` to the bucket name from the first step
+    1. Run the script to create infrastructure
+        ```bash
+        ./provision.sh
+        ```
 
-    > NOTE the first run **MAY** fail due to eventual consistency with enabling APIs.  Just re-run if you see an error similar to this: "api not enabled, if it was just enabled, wait for a few minutes". Future updates may fix this.
+    > NOTE the first run can take 15-20 minutes to create all GKE instances and keys.
+
+## Observing Secure CI/CD Pipeline
+
+In this section, you will modify a source file, commit it and push to the repository. The CI/CD pipeline will start automatically based on the new commit.
 
 1. Add your name to the `src/main.go` in place of "Mike". Here's an example:
     ```golang
@@ -103,7 +73,11 @@ graph TD
 
 1. Watch the [CI/CD Pipeline](-/pipelines) from within Gitlab
 
-1. Approve "Security", "Development", "QA" stages of the build
+    ![Pipeline Example](docs/pipeline-example.png)
+
+1. Approve "Security", "Development", "QA" stages of the build. The pipeline is creating "Attestations" representing the manual step of approving the build at that point-in-time.
+
+    ![Approval Flow](docs/pipeline-definition-manual-overlay.png)
 
 ## Setting up CI
 
