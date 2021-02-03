@@ -327,7 +327,7 @@ deploy-QA:
     - if [ ! -z "$ERRORS" ]; then echo "Failed Deployment" && echo "${ERRORS}" && exit 1; fi
   only:
     refs:
-      - master
+      - main
 
 accept-QA:
   stage: QA
@@ -339,7 +339,7 @@ accept-QA:
     - .create-attestation
   only:
     refs:
-      - master
+      - main
 
 deploy-production:
   stage: prod
