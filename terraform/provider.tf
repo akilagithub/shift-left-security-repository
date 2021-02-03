@@ -9,14 +9,9 @@ provider "google-beta" {
 }
 
 terraform {
-  # Authentication provided by ~/.terraformrc credentails configuration
-  backend "remote" {
 
-    organization = "google-cloud-solution-architects"
-
-    workspaces {
-      name = "secure-cicd-blueprint"
-    }
+  backend "gcs" {
+    prefix  = "terraform/state"
   }
 }
 
