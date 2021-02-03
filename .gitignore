@@ -4,6 +4,9 @@ pkg/
 ### VS Code ###
 .vscode/
 
+## IntelliJ ##
+.idea/
+
 ## Mac
 .DS_Store
 
