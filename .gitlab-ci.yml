@@ -372,7 +372,7 @@ deploy-production:
     - if [ ! -z "$ERRORS" ]; then echo "Failed Deployment" && echo "${ERRORS}" && exit 1; fi
   only:
     refs:
-      - master
+      - main
 
 
 
