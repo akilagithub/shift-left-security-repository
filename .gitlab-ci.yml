@@ -293,7 +293,7 @@ accept-development:
     - .create-attestation
   only:
     refs:
-      - master
+      - main
 
 #### Required Attestation is "security" and "build"
 deploy-QA:
