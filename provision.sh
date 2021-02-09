@@ -40,6 +40,9 @@ else
     echo -e "${FANCY_OK} Access to Terraform State Bucket succeeded"
 fi
 
+# these two take a LONG time and terraform is async, run this ahead of time to ensure brand new projects enable these services
+gcloud services enable cloudresourcemanager.googleapis.com secretmanager.googleapis.com
+
 echo -e "${FANCY_NONE} Provision (or update) infrastructure"
 pushd terraform
     terraform init -backend-config="bucket=${TF_STATE_BUCKET}"
