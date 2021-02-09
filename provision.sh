@@ -43,6 +43,5 @@ fi
 echo -e "${FANCY_NONE} Provision (or update) infrastructure"
 pushd terraform
     terraform init -backend-config="bucket=${TF_STATE_BUCKET}"
-    terraform plan -var="project=${GOOGLE_PROJECT_ID}"
-    terraform apply -var="project=${GOOGLE_PROJECT_ID}" -auto-approve
+    terraform apply -var="project=${GOOGLE_PROJECT_ID}" -auto-approve # no real need for plan
 popd

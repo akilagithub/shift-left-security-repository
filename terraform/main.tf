@@ -19,15 +19,15 @@ resource "random_pet" "server" {}
 locals {
   petname = random_pet.server.id
   admin_enabled_apis = [
-    "compute.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "secretmanager.googleapis.com",
+    "compute.googleapis.com",
     "iam.googleapis.com",
     "containeranalysis.googleapis.com",
     "binaryauthorization.googleapis.com",
     "container.googleapis.com",
     "cloudkms.googleapis.com",
     "anthos.googleapis.com",
-    "secretmanager.googleapis.com",
     "containerscanning.googleapis.com"
   ]
 
