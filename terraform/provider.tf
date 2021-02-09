@@ -15,13 +15,13 @@
  */
 
 provider "google" {
-  project = "binary-authorization"
-  region  = "us-central1"
+  project = var.project
+  region  = var.region
 }
 
 provider "google-beta" {
-  project = "binary-authorization"
-  region  = "us-central1"
+  project = var.project
+  region  = var.region
 }
 
 terraform {

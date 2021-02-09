@@ -31,6 +31,12 @@ variable zone {
   description = "GKE Node Zone"
 }
 
+variable region {
+  type        = string
+  default     = "us-central1"
+  description = "GKE Node Zone"
+}
+
 variable gke-version {
   type        = string
   default     = "1.16."
