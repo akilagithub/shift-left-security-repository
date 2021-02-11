@@ -24,6 +24,8 @@ Your task is to push a new version of the application from DEV environment to QA
 
 ## Infrastructure (one-time setup)
 
+:warning: This is a one-time required step for your CI/CD pipelines to run.
+
 1. Setup the Infrastructure (manually)
     1. Create a GCS bucket to hold the Terraform remote state
     1. View the `vars.sh` and set the following variables:
@@ -71,6 +73,9 @@ In this section, you will modify a source file, commit it and push to the reposi
 1. Commit and push changes to the repository
     1. `git commit -a -m 'personalizing the app' && git push -u origin master`
 
+    1. If you are using Verified (signed) commits, you may need to add a TTY for GPG
+        > SEE [Signed Git Commits](#signed-git-commits) in this document for more details
+
 1. Watch the [CI/CD Pipeline](-/pipelines) from within Gitlab
 
     ![Pipeline Example](docs/pipeline-example.png)
@@ -113,9 +118,19 @@ This project is setup to ensure all commits are signed using GPG [as described i
 
 ### Commit Format
 
+To create a signed commit, you need to include `-S` during the commit. IF you are not presented with a password prompt for the GPG passphrase, see next section on `GPG_TTY`.
+
 ```bash
-git commit -a -S -m 'Signed commit'
+git commit -S -m 'Signed commit'
 # supply passphrase if needed (recommend setting up a passphrase)
+```
+
+### Setup for signed commits
+Add this to your .bashrc or profile. This code directs GPG's TTY to the current shell's TTY. Without this, the process to put in the GPG password is much more complicated.
+
+```bash
+# for GPG signing
+export GPG_TTY=$(tty)
 ```
 
 # Resource Usage
