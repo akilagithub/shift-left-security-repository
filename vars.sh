@@ -20,8 +20,17 @@
 #   3. Replace the value with your google project in quotes
 export GOOGLE_PROJECT_ID="${PROJECT_ID:-$(gcloud config list --format 'value(core.project)')}"
 
-# Name of the GCS bucket for the terraform state
+# Name of the GCS bucket for the terraform state. Changing this is optional, by default a
+# bucket will be created using the <project-id>-tf-state format within the project.
 # 2 ways to change:
 #   1. Set an environment variable "TF_STATE_BUCKET" to the name of the bucket
 #   2. Replace the value with your bucket name in quotes
-export TF_STATE_BUCKET="${TF_STATE_BUCKET:-NOT_FOUND}"
+export TF_STATE_BUCKET="${TF_STATE_BUCKET:-${GOOGLE_PROJECT_ID}-tf-state}"
+
+# Google Service Account
+# Should the script create a Google Service Account (GSA) specific to buildling the infrastructure?
+# "TRUE" will create a GSA and activate that service account with gcloud so all infrastructre created
+# during the provision.sh file will be conducted with that GSA. 'TRUE' is the ONLY recognized value
+#
+# "FALSE" (default) will use the current user logged into gcloud.
+export CREATE_INFRA_GSA="FALSE"

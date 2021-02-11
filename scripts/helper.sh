@@ -39,6 +39,21 @@ FANCY_NONE="${STATUS_NEUTRAL}        ${TXT_CLEAR} "
 # expose the Terraform variable "project" to use in the TF scripts
 export TF_VAR_project=${GOOGLE_PROJECT_ID}
 
+# Setup the email for account creating infrastructure
+if [ "${CREATE_INFRA_GSA}" == "TRUE" ]; then
+    export INFRA_ACCOUNT_EMAIL="tf-gsa@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
+    # Create GSA
+    gcloud iam service-accounts create tf-gsa --description="Terraform Google Service Account" --display-name=tf-gsa
+    # Setup "editor" permissions for GSA
+    gcloud projects add-iam-policy-binding ${GOOGLE_PROJECT_ID} --member="serviceAccount:${INFRA_ACCOUNT_EMAIL}" --role="roles/editor"
+    gcloud iam service-accounts keys create gsa-key.json --iam-account="${INFRA_ACCOUNT_EMAIL}"
+    gcloud auth activate-service-account --key-file gsa-key.json
+    # Clean up GSA key
+    rm -rf gsa-key.json
+else
+    export INFRA_ACCOUNT_EMAIL="$(gcloud config list account --format 'value(core.account)' 2> /dev/null)"
+fi
+
 ################# Functions ################
 
 function check_fail() {
