@@ -52,3 +52,6 @@ coverage-report.xml
 *.pub
 *.pgp
 *.txt
+
+# helper file
+debug.sh
