@@ -246,6 +246,7 @@ deploy-development:
     url: http://dev.secure.ensor-labs.com
   variables:
     ACTOR: "security"
+    ZONE: "us-central1-a"
   before_script:
     - mkdir -p keys
     - mkdir -p tmp
@@ -253,25 +254,27 @@ deploy-development:
     - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
     - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
-    - export CLUSTER_NAME="bin-auth-dev" # hardcoded in Terraform #TODO: Create and pull from secret during creation
+    - export CLUSTER_NAME="bin-auth-dev" # hardcoded in Terraform
+    - gcloud -q components update
+    - gcloud -q components install kustomize
   script:
-
-    # Verify attestations exist for image+digest
+    # OPTIONAL - Check to see if the attestation is present for IMG digest + Actor/Signer
+    # This is NOT required and only for demonstration purposes. BinAuthZ Policy checks for this
+    # Check if attestation created for security-attestor (Note: This is NOT necessary because the Policy rejects non-attestation builds)
     - |
       export ATTESTATION_LIST=$(gcloud container binauthz attestations list \
       --project="${GOOGLE_PROJECT_ID}" \
       --attestor="projects/${GOOGLE_PROJECT_ID}/attestors/${ACTOR}-attestor" \
       --filter="resourceUri=https://${IMAGE_DIGEST}" --format="value('name')")
+    - if [ "${ATTESTATION_LIST}" == "" ]; then echo -e "Required Attestation for '${ACTOR}-attestor' does not exist, build will likely fail.\nATTESTATION_LIST=${ATTESTATION_LIST}"; fi
+    # End Optional
 
-    # Check if attestation created for security-attestor (Note: This is NOT necessary because the Policy rejects non-attestation builds)
-    - if [ ! -z "$ATTESTATION_LIST" ]; then echo "Required Attestation for '${ACTOR}-attestor' does not exist" && exit 1; fi
-
-    - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone us-central1-a
-    - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+    # Start deployment
+    - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone ${ZONE}
     # Build manifest files
     - cd ${CI_PROJECT_DIR}/k8s/overlays/development
-    - ${CI_PROJECT_DIR}/kustomize edit set image busybox="${IMAGE_DIGEST}"
-    - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/development/deploy-manifest.yaml
+    - kustomize edit set image busybox="${IMAGE_DIGEST}"
+    - kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/development/deploy-manifest.yaml
     - kubectl apply -f deploy-manifest.yaml
     # Look for Events=FailedCreate and the Image+Digest
     - sleep 3s # wait for deployment to sync
@@ -313,13 +316,14 @@ deploy-QA:
     - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
     - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
     - export CLUSTER_NAME="bin-auth-qa" # hardcoded in Terraform #TODO: Create and pull from secret during creation
+    - gcloud -q components update
+    - gcloud -q components install kustomize
   script:
     - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone us-central1-a
-    - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
     # Build manifest files
     - cd ${CI_PROJECT_DIR}/k8s/overlays/qa
-    - ${CI_PROJECT_DIR}/kustomize edit set image busybox="${IMAGE_DIGEST}"
-    - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/qa/deploy-manifest.yaml
+    - kustomize edit set image busybox="${IMAGE_DIGEST}"
+    - kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/qa/deploy-manifest.yaml
     - kubectl apply -f deploy-manifest.yaml
     # Look for Events=FailedCreate and the Image+Digest
     - sleep 3s
@@ -358,13 +362,14 @@ deploy-production:
     - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
     - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
     - export CLUSTER_NAME="bin-auth-prod" # hardcoded in Terraform #TODO: Create and pull from secret during creation
+    - gcloud -q components update
+    - gcloud -q components install kustomize
   script:
     - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone us-central1-a
-    - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
     # Build manifest files
     - cd ${CI_PROJECT_DIR}/k8s/overlays/production
-    - ${CI_PROJECT_DIR}/kustomize edit set image busybox="${IMAGE_DIGEST}"
-    - ${CI_PROJECT_DIR}/kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/production/deploy-manifest.yaml
+    - kustomize edit set image busybox="${IMAGE_DIGEST}"
+    - kustomize build > ${CI_PROJECT_DIR}/k8s/overlays/production/deploy-manifest.yaml
     - kubectl apply -f deploy-manifest.yaml
     # Look for Events=FailedCreate and the Image+Digest
     - sleep 3s
