@@ -135,7 +135,8 @@ build-app:
     DOCKER_DRIVER: overlay2
     FULL_IMAGE: gcr.io/${GOOGLE_PROJECT_ID}/hello-world
   services:
-    - docker:19.03.12-dind
+    - name: docker:19.03.12-dind
+      alias: docker
   before_script:
     - mkdir -p keys
     - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
