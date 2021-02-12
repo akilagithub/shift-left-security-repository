@@ -246,7 +246,6 @@ deploy-development:
     url: http://dev.secure.ensor-labs.com
   variables:
     ACTOR: "security"
-    ZONE: "us-central1-a"
   before_script:
     - mkdir -p keys
     - mkdir -p tmp
@@ -270,6 +269,7 @@ deploy-development:
     # End Optional
 
     # Start deployment
+    - export ZONE=$(gcloud container clusters list --filter="name=${CLUSTER_NAME}" --format="value(location)")
     - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone ${ZONE}
     # Build manifest files
     - cd ${CI_PROJECT_DIR}/k8s/overlays/development
@@ -315,11 +315,12 @@ deploy-QA:
     - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
     - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
-    - export CLUSTER_NAME="bin-auth-qa" # hardcoded in Terraform #TODO: Create and pull from secret during creation
+    - export CLUSTER_NAME="bin-auth-qa" # hardcoded in Terraform
     - gcloud -q components update
     - gcloud -q components install kustomize
   script:
-    - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone us-central1-a
+    - export ZONE=$(gcloud container clusters list --filter="name=${CLUSTER_NAME}" --format="value(location)")
+    - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone ${ZONE}
     # Build manifest files
     - cd ${CI_PROJECT_DIR}/k8s/overlays/qa
     - kustomize edit set image busybox="${IMAGE_DIGEST}"
@@ -361,11 +362,12 @@ deploy-production:
     - gcloud auth activate-service-account cicd-builds@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --key-file=${CI_PROJECT_DIR}/keys/key-file.json
     - gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
     - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
-    - export CLUSTER_NAME="bin-auth-prod" # hardcoded in Terraform #TODO: Create and pull from secret during creation
+    - export CLUSTER_NAME="bin-auth-prod" # hardcoded in Terraform
     - gcloud -q components update
     - gcloud -q components install kustomize
   script:
-    - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone us-central1-a
+    - export ZONE=$(gcloud container clusters list --filter="name=${CLUSTER_NAME}" --format="value(location)")
+    - gcloud container clusters get-credentials ${CLUSTER_NAME} --zone ${ZONE}
     # Build manifest files
     - cd ${CI_PROJECT_DIR}/k8s/overlays/production
     - kustomize edit set image busybox="${IMAGE_DIGEST}"
