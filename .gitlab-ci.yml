@@ -129,13 +129,13 @@ static-app-code-scanner:
 
 build-app:
   stage: build
-  image: docker:19.03.8
+  image: docker:19.03.12
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
     FULL_IMAGE: gcr.io/${GOOGLE_PROJECT_ID}/hello-world
   services:
-    - docker:19.03.8-dind
+    - docker:19.03.12-dind
   before_script:
     - mkdir -p keys
     - echo $GOOGLE_BUILD_GSA | base64 -d > ${CI_PROJECT_DIR}/keys/key-file.json
@@ -156,13 +156,13 @@ build-app:
 
 container-structure:
   stage: security-review
-  image: docker:19.03.8
+  image: docker:19.03.12
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
     FULL_IMAGE: gcr.io/${GOOGLE_PROJECT_ID}/hello-world
   services:
-    - docker:19.03.8-dind
+    - docker:19.03.12-dind
   allow_failure: true
   before_script:
     - wget -O container-structure-test-linux-amd64 https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64
@@ -222,7 +222,7 @@ gatekeeper-validation:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_DRIVER: overlay2
   services:
-    - docker:19.03.8-dind
+    - docker:19.03.12-dind
   before_script:
     - export IMAGE_DIGEST="$(cat image-details.txt | awk '{print $4 }')"
     - apk add curl
