@@ -50,6 +50,18 @@ secret-scanner:
     - git-hound -config security/githound.yaml sniff > output.txt
     - cat output.txt
 
+secret-scanner-talisman:
+  stage: test
+  before_script:
+    - curl -Lo talisman https://github.com/thoughtworks/talisman/releases/download/v1.11.0/talisman_linux_amd64
+    - chmod +x talisman
+  script:
+    - ./talisman --scan --ignoreHistory
+    - |
+      if [[ $? -gt 0 ]]; then
+        cat talisman_reports/data/report.json
+      fi
+
 test-coverage-app:
   stage: test
   extends:
