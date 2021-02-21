@@ -1,0 +1,19 @@
+## ignore list
+# talisman --checksum="*.tf *.png go.sum vms/*.* .gitlab-ci.yml *.md *.sh"
+
+# Set the overall thershold to medium
+threshold: medium
+
+fileignoreconfig:
+- filename: '*.png'
+  checksum: 9cf3cc507ee69e2f34c4d914e6b3a1cbcef38fa5c09776582fa972f96d782fa4
+- filename: go.sum
+  checksum: 10a0aa59d6b797675d781d878e4b2727241cc9bc28ac2ee103fc2051d74af7e3
+- filename: vms/*.*
+  checksum: b50cc17c2ed91d8ec9e29efb04779fca1c1868f4c756783b6b88852bcc6770a2
+- filename: .gitlab-ci.yml
+  checksum: 0dd963bef127a39786d0d5f6c9ba64f59df6f8cfc7d08f1132bf78a1f0e67b8a
+- filename: '*.md'
+  checksum: 3e45825281ce50e15cbac001d348a46f79e7894cd4108bb8648531d8898d365e
+- filename: '*.sh'
+  checksum: b1424b49eac8305429727fe0c99ffc79e301030d10bf5064a0ae3c6abce78f33
